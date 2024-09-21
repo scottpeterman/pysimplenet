@@ -8,7 +8,6 @@ Certainly! Below is your updated `README.md` with the following enhancements:
 
 ---
 
-```markdown
 # Pysimplenet
 
 ![GUI Full Screenshot](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/gui_full.png)
