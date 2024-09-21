@@ -1,11 +1,3 @@
-Certainly! Below is your updated `README.md` with the following enhancements:
-
-1. **Banner Screenshots**: Added two banner images at the top. Ensure that your banner images (`banner1.png` and `banner2.png`) are placed in an `images` directory within your repository.
-2. **Updated Executables**: Included the new `simplenet-gui` launcher in the usage instructions.
-3. **License and Python Version**: Updated the license to GNU GPLv3 and the Python version requirement to `>=3.9` to match your `setup.py`.
-4. **Repository URLs**: Updated repository URLs to reflect your GitHub username and project name.
-5. **Consistency**: Ensured all sections are consistent with the latest project structure and setup configurations.
-
 ---
 
 # Pysimplenet
@@ -619,13 +611,6 @@ As of now, the tool primarily uses SSH for device communication. Support for oth
 #### How can I contribute to the project?
 
 We welcome contributions! Please refer to the [Contributing](#contributing) section for more details.
-
----
-
-**Note**: Remember to replace placeholders like `support@example.com` and ensure that your banner images (`banner1.png` and `banner2.png`) are correctly placed in the `images` directory within your repository.
-
----
-```
 
 ---
 
