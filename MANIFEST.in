@@ -1,0 +1,24 @@
+# Include all files in simplenet/gui
+recursive-include simplenet/gui *
+
+# Include YAML and TTP files in project/drivers and project/vars
+recursive-include project/drivers *.yml
+recursive-include project/drivers *.yaml
+recursive-include project/vars *.yml
+recursive-include project/vars *.yaml
+
+# Include all image files in simplenet/gui/pyeasyedit/images
+recursive-include simplenet/gui/pyeasyedit/images *.png
+recursive-include simplenet/gui/pyeasyedit/images *.jpg
+recursive-include simplenet/gui/pyeasyedit/images *.ico
+
+# Include all template files in simplenet/templates
+recursive-include simplenet/templates *.ttp
+
+# Include the license file
+include LICENSE
+
+# Include README files
+include README.md
+include README_FULL.md
+include README_cli.md
