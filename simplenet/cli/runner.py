@@ -226,7 +226,7 @@ def run_for_device(row, db_file, driver, vars_file, driver_name, timeout, prompt
 @click.option('--pretty', is_flag=True, help='Enable pretty output.')
 @click.option('--output-root', default='./output', help='Root directory for all output files [default=./output].')
 @click.option('--num-processes', default=4, help='Number of processes to run concurrently [default=4].')
-def query_yaml(inventory, query, driver, vars, driver_name, timeout, prompt, prompt_count, look_for_keys, timestamps,
+def main(inventory, query, driver, vars, driver_name, timeout, prompt, prompt_count, look_for_keys, timestamps,
                inter_command_time, pretty, output_root, num_processes):
     """
     Command-line tool to query YAML inventory data using SQL and execute commands for matching devices.
@@ -307,4 +307,4 @@ def query_yaml(inventory, query, driver, vars, driver_name, timeout, prompt, pro
 
 
 if __name__ == '__main__':
-    query_yaml()
+    main()

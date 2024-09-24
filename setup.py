@@ -34,8 +34,8 @@ setup(
             'pysshpass=pysshpass.__main__:main',
             'simplenet=simplenet.cli.simplenet:main',
             'vsndebug=simplenet.gui.vsndebug:main',
-            'simplenet-gui=simplenet.gui.main_gui:main',
-            'simplenet-runner=simplenet.runner:main',  # Added runner.py entry point
+            'simplenet-gui=simplenet.main:main',
+            'simplenet-runner=simplenet.cli.runner:main',  # Corrected runner entry point
         ],
     },
     package_data={

@@ -252,18 +252,33 @@ class RunnerForm(QDialog):
             self.on_process_finished()
 
     def build_command(self):
-        command = [
-            sys.executable,
-            "-u", "simplenet/cli/runner.py",
-            "--inventory", f"{self.inventory_input.text()}",
-            "--query", f"{self.query_input.text()}",
-            "--driver", f"{self.driver_input.text()}",
-            "--driver-name", self.driver_name_input.text(),
-            "--timeout", str(self.timeout_input.value()),
-            "--prompt", f"{self.prompt_input.text()}",
-            "--prompt-count", str(self.prompt_count_input.value()),
-            "--inter-command-time", str(self.inter_command_time_input.value())
-        ]
+        # Check if we are in a development environment or an installed environment
+        if os.path.exists('simplenet/cli/runner.py'):
+            # Development environment: run the Python script directly
+            command = [
+                sys.executable, "-u", "simplenet/cli/runner.py",
+                "--inventory", f"{self.inventory_input.text()}",
+                "--query", f"{self.query_input.text()}",
+                "--driver", f"{self.driver_input.text()}",
+                "--driver-name", self.driver_name_input.text(),
+                "--timeout", str(self.timeout_input.value()),
+                "--prompt", f"{self.prompt_input.text()}",
+                "--prompt-count", str(self.prompt_count_input.value()),
+                "--inter-command-time", str(self.inter_command_time_input.value())
+            ]
+        else:
+            # Installed environment: use the simplenet-runner executable
+            command = [
+                "simplenet-runner",
+                "--inventory", f"{self.inventory_input.text()}",
+                "--query", f"{self.query_input.text()}",
+                "--driver", f"{self.driver_input.text()}",
+                "--driver-name", self.driver_name_input.text(),
+                "--timeout", str(self.timeout_input.value()),
+                "--prompt", f"{self.prompt_input.text()}",
+                "--prompt-count", str(self.prompt_count_input.value()),
+                "--inter-command-time", str(self.inter_command_time_input.value())
+            ]
 
         if self.vars_input.text():
             command.extend(["--vars", f'"{self.vars_input.text()}"'])
