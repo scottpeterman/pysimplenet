@@ -1,0 +1,61 @@
+drivers:
+  cisco_ios:
+    error_string: Invalid input detected
+    output_path: ./output/{{ hostname }}_version_check.txt
+    output_mode: append
+    prompt_count: 4
+    actions:
+    - action: "send_command"
+      display_name: "Set Terminal Length"
+      command: "term len 0"
+      expect: "#"
+
+
+    - action: "send_command"
+      display_name: "Show CDP Neighbors Detail"
+      command: "show cdp neighbors detail"
+      expect: "#"
+      output_path: "./output/{{ hostname }}_cdp_neighbors.txt"
+      output_mode: "overwrite"
+      ttp_path: "./project/templates/ios_show_cdp_neighbors.ttp"
+      store_query:
+        query: "[][]"
+        variable_name: "cdp_neighbors"
+
+      output_format: text
+    - action: "send_command_loop"
+      display_name: "Loop Through Interfaces"
+      variable_name: "cdp_neighbors"
+      key_to_loop: "interface"
+      command_template: "show interface [{ interface }]"
+      expect: "#"
+      output_path: "./output/{{ hostname }}_interface_details.txt"
+      output_mode: "append"
+      parse_output: true
+      use_named_list:
+        list_name: "interface_mtu"
+        item_key: "mtu"
+        ttp_path: "./project/templates/interface_mtu_switch.ttp"
+        store_query:
+          query: "[][]"
+          variable_name: "interface_mtu"
+
+    - action: "audit_loop"
+      display_name: "Check MTU for Interfaces with CDP Neighbors"
+      policy_name: "MTU Check for CDP Neighbors"
+      variable_name: "interface_mtu"
+      key_to_check: "interface"
+      target_value: "1500"
+      query: '"{{ hostname }}".action_variables.interface_mtu[0].mtu[*]'
+      pass_if:
+      - check_type: jmespath
+        key_to_check: mtu
+        name: Check if MTU is 1500 for CDP Neighbor Interfaces
+        operator:
+          type: is_equal
+          value: '1500'
+        query: mtu[0]
+    - action: "print_audit"
+      display_name: "CDP Neighbor MTU Audit"
+      output_file_path: "./output/{{ hostname }}_cdp_mtu_audit.yaml"
+      format: "both"

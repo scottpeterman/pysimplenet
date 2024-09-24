@@ -1,13 +1,24 @@
+import logging
+logging.basicConfig(level=logging.CRITICAL)
+
+import traceback
+
 import paramiko
 import re
 from threading import RLock
 from typing import List, Union, Pattern, Optional
-import logging
 import time
 from socket import timeout as SocketTimeout
 from cryptography.fernet import Fernet
 
-debug = True
+# Ensure stdout and stderr use UTF-8 encoding
+# sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+# sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+debug = False
+
+
+
+
 class ThreadSafeSSHConnection:
     def __init__(
             self,
@@ -19,38 +30,42 @@ class ThreadSafeSSHConnection:
             max_retries: int = 3,
             retry_interval: int = 5,
             prompt_failure: bool = True,
-            scrub_esc: bool = False,  # New flag to scrub escape characters
+            scrub_esc: bool = False,  # Flag to scrub escape characters
             encryption_key_path: str = "./crypto.key"  # Path to the encryption key
-
     ):
-        self.debug_output = True
+
+        self.debug_output = debug
+        # if self.debug_output:
+        #     print(.setLevel(logging.DEBUG)
+        # else:
+        #     print(.setLevel(logging.INFO)
+
+        # Validate hostname
+        if not hostname or not isinstance(hostname, str):
+            raise ValueError("Invalid hostname provided")
         self._hostname = hostname
         self._displayname = hostname  # Default display name to hostname initially
+
+        # Initialize other attributes
         self._client = paramiko.SSHClient()
         self._channel: Optional[paramiko.Channel] = None
         self._output_buffer = ""
         self._accumulation_buffer = ""
         self._meta_data = {}
         self._lock = RLock()
-        self._debug = debug
         self._look_for_keys = look_for_keys
         self._timeout = timeout
         self._allow_agent = allow_agent
         self._max_retries = max_retries
         self._retry_interval = retry_interval
         self._prompt_failure = prompt_failure
-        self._scrub_esc = scrub_esc  # Initialize scrub_esc flag
-        self._encryption_key_path = encryption_key_path  # Path to the encryption key
-
-
-        # Configure logging
-        logging.basicConfig(level=logging.DEBUG if self.debug_output else logging.INFO)
-        self._logger = logging.getLogger(f"SSHConnection-{hostname}")
-        if self.debug_output:
-            self._logger.debug(f"Prompt failure detection set to: {self._prompt_failure}")
+        self._scrub_esc = scrub_esc
+        self._encryption_key_path = encryption_key_path
 
         # Apply SSH crypto settings
         self.set_ssh_crypto_settings()
+
+        print(f"Initialized SSHConnection to {self._hostname}")
 
     @property
     def hostname(self) -> str:
@@ -72,23 +87,17 @@ class ThreadSafeSSHConnection:
         with self._lock:
             return self._meta_data.copy()
 
-    @property
-    def debug(self) -> bool:
-        with self._lock:
-            return self._debug
-
-    # @debug.setter
-    # def debug(self, value: bool) -> None:
+    # @property
+    # def debug(self) -> bool:
     #     with self._lock:
-    #         self._debug = value
-    #         self._logger.setLevel(logging.DEBUG if value else logging.INFO)
+    #         return self._debug
 
     def set_displayname(self, displayname: str) -> None:
         """Sets a human-readable display name for the connection."""
         with self._lock:
             self._displayname = displayname
             if self.debug_output:
-                self._logger.debug(f"Display name set to: {self._displayname}")
+                print(f"Display name set to: {self._displayname}")
 
     def set_meta_data(self, key: str, value: any) -> None:
         with self._lock:
@@ -101,7 +110,7 @@ class ThreadSafeSSHConnection:
     def set_ssh_crypto_settings(self) -> None:
         """Sets SSH crypto settings for preferred KEX, ciphers, and keys."""
         if self.debug_output:
-            self._logger.debug("Applying SSH crypto settings...")
+            print("Applying SSH crypto settings...")
 
         paramiko.Transport._preferred_kex = (
             "diffie-hellman-group14-sha1",
@@ -141,7 +150,7 @@ class ThreadSafeSSHConnection:
             "rsa-sha2-512"
         )
         if self.debug_output:
-            self._logger.debug("SSH crypto settings applied.")
+            print("SSH crypto settings applied.")
 
     @staticmethod
     def is_encrypted(password: str) -> bool:
@@ -156,136 +165,160 @@ class ThreadSafeSSHConnection:
             fernet = Fernet(key)
             return fernet.decrypt(encrypted_password.encode()).decode()
         except Exception as e:
-            self._logger.error(f"Error decrypting password: {e}")
+            print(f"Error decrypting password: {e}")
             raise RuntimeError("Failed to decrypt password")
 
-    def connect(self, username: str, password: str, port: int = 22, **kwargs) -> None:
+    def connect(self, username: str, password: str, port: int = 22, look_for_keys = False, timeout = 10,  allow_agent = False):
+                #alidate input parameters
+        if not username or not isinstance(username, str):
+            raise ValueError("Invalid username provided")
+        if password is None or not isinstance(password, str):
+            raise ValueError("Invalid password provided")
+        if not isinstance(port, int) or not (1 <= port <= 65535):
+            raise ValueError(f"Invalid port number: {port}")
+        if not isinstance(self._hostname, str) or not self._hostname:
+            raise ValueError(f"Invalid hostname: {self._hostname}")
+        if not isinstance(self._look_for_keys, bool):
+            raise ValueError(f"Invalid value for look_for_keys: {self._look_for_keys}")
+        if not isinstance(self._allow_agent, bool):
+            raise ValueError(f"Invalid value for allow_agent: {self._allow_agent}")
+        if not isinstance(self._timeout, (int, float)) or self._timeout <= 0:
+            raise ValueError(f"Invalid timeout value: {self._timeout}")
+
+        # Log the parameters (excluding the password)
+        print(f"Connecting with parameters:")
+        print(f"Hostname: {self._hostname}")
+        print(f"Port: {port}")
+        print(f"Username: {username}")
+        print(f"Look for keys: {self._look_for_keys}")
+        print(f"Allow agent: {self._allow_agent}")
+        print(f"Timeout: {self._timeout}")
+        print(f"Max retries: {self._max_retries}")
+        print(f"Retry interval: {self._retry_interval}")
+        print(f"Prompt failure: {self._prompt_failure}")
+        # print(f"Additional kwargs: {kwargs}")
+
         for attempt in range(self._max_retries):
             try:
                 # Decrypt password if it is encrypted
                 if self.is_encrypted(password):
                     password = self.decrypt_password(password)
-                    if self.debug_output:
-                        self._logger.debug("Password decrypted successfully.")
+                    print("Password decrypted successfully.")
 
                 with self._lock:
-                    self._logger.info(
-                        f"Connecting to {self._hostname}:{port} with username {username} (Attempt {attempt + 1}/{self._max_retries})")
+                    print(
+                        f"Connecting to {self._hostname}:{port} with username '{username}' (Attempt {attempt + 1}/{self._max_retries})"
+                    )
                     self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                    if self.debug_output:
-                        self._logger.debug("Set missing host key policy")
-                        self._logger.debug(
-                            f"Attempting connection with look_for_keys={self._look_for_keys}, timeout={self._timeout}, allow_agent={self._allow_agent}")
+                    print(
+                        f"Connection parameters: look_for_keys={self._look_for_keys}, timeout={self._timeout}, allow_agent={self._allow_agent}"
+                    )
                     try:
+                    # Attempt connection
                         self._client.connect(
-                            self._hostname,
-                            port,
-                            username,
-                            password,
-                            look_for_keys=self._look_for_keys,
-                            timeout=self._timeout,
-                            allow_agent=self._allow_agent,
-                            **kwargs,
+                            hostname=self.hostname,
+                            port=port,
+                            username=username,
+                            password=password,
+                            look_for_keys=look_for_keys,
+                            timeout=timeout,
+                            allow_agent=allow_agent,
+                            # **kwargs,
                         )
                     except Exception as e:
-                        print(e)
-                        raise e
-                    self._logger.info(f"Connected to {self.hostname}")
-                    try:
-                        self._channel = self._client.invoke_shell()
-                        if self.debug_output:
-                            self._logger.debug("Shell invoked successfully")
-                    except Exception as e:
-                        self._logger.error(f"Invoke shell failed: {e}")
-                        raise RuntimeError("Invoke shell failed, host may not support it")
-                    self._logger.info(f"Connected to {self._hostname} ({self._displayname})")
+                        print(f"Paramiko connect failuer: (e)")
+                        traceback.print_exc()
+                    # print(f"Connected to {self._hostname}")
+
+                    # Invoke shell
+                    self._channel = self._client.invoke_shell()
+                    # print("SSH shell invoked successfully")
+
                     return  # Connection successful, exit the method
-            except paramiko.AuthenticationException:
-                self._logger.error("Authentication failed.")
-                raise RuntimeError("Authentication failed, please verify your credentials")
-            except paramiko.SSHException as e:
-                self._logger.error(f"SSHException: {e}")
+
+            except paramiko.AuthenticationException as auth_error:
+                print(f"Authentication failed: {auth_error}")
+                raise auth_error
+            except paramiko.SSHException as ssh_error:
+                print(f"SSHException on attempt {attempt + 1}: {ssh_error}")
                 if attempt < self._max_retries - 1:
-                    self._logger.info(f"Retrying in {self._retry_interval} seconds...")
+                    print(f"Retrying in {self._retry_interval} seconds...")
                     time.sleep(self._retry_interval)
                 else:
-                    raise RuntimeError(f"Failed to establish SSH connection after {self._max_retries} attempts: {e}")
+                    raise ssh_error
+            except SocketTimeout as timeout_error:
+                print(f"Socket timeout on attempt {attempt + 1}: {timeout_error}")
+                if attempt < self._max_retries - 1:
+                    print(f"Retrying in {self._retry_interval} seconds...")
+                    time.sleep(self._retry_interval)
+                else:
+                    raise timeout_error
             except Exception as e:
-                self._logger.error(f"Exception during connection: {e}")
+                print(f"Exception on attempt {attempt + 1}: {e}")
                 if attempt < self._max_retries - 1:
-                    self._logger.info(f"Retrying in {self._retry_interval} seconds...")
+                    print(f"Retrying in {self._retry_interval} seconds...")
                     time.sleep(self._retry_interval)
                 else:
-                    raise RuntimeError(f"Error during SSH connection after {self._max_retries} attempts: {e}")
+                    raise RuntimeError(f"Connection failed after {self._max_retries} attempts: {e}")
 
     def disconnect(self) -> None:
         with self._lock:
-            self._logger.info("Disconnecting...")
+            print("Disconnecting...")
             if self._channel:
                 try:
                     self._channel.close()
+                    print("Channel closed successfully")
                 except Exception as e:
-                    self._logger.error(f"Exception during channel close: {e}")
+                    print(f"Exception during channel close: {e}")
             try:
                 self._client.close()
+                print("Client closed successfully")
             except Exception as e:
-                self._logger.error(f"Exception during client close: {e}")
-            self._logger.info("Disconnected.")
+                print(f"Exception during client close: {e}")
+            print("Disconnected.")
 
     def send_newline(self, expect: Union[str, Pattern], timeout: float = 10,
-                         expect_occurrences: int = 1) -> str:
+                     expect_occurrences: int = 1) -> str:
         with self._lock:
             try:
                 self._accumulation_buffer = ""  # Reset the accumulation buffer for the new command
-                self._logger.debug(f"Sending new line/enter")
-                try:
-                    self._channel.send("\n")
-                except Exception as e:
-                    self._logger.error(f"Error in send \\n: {e}")
-                    raise e
+                print("Sending new line/enter")
+                self._channel.send("\n")
 
                 if self._prompt_failure:
                     result = self._read_until(expect, timeout, expect_occurrences)
                 else:
-                    # If prompt failure is set to False, we'll use a different approach
                     result = self._read_with_timeout(timeout)
 
                 if self._scrub_esc:  # Scrub escape characters if the flag is set
                     result = self._scrub_escape_characters(result)
 
-                self._logger.debug(f"Received response for command : {result}")
+                print(f"Received response: {result}")
                 return result
             except Exception as e:
-                self._logger.error(f"Exception during send_command: {e}")
-                raise RuntimeError(f"Failed to send command '{command}': {e}")
+                print(f"Exception during send_newline: {e}")
+                raise RuntimeError(f"Failed to send newline: {e}")
 
     def send_command(self, command: str, expect: Union[str, Pattern], timeout: float = 10,
                      expect_occurrences: int = 1) -> str:
         with self._lock:
             try:
                 self._accumulation_buffer = ""  # Reset the accumulation buffer for the new command
-                self._logger.debug(f"Sending command: {command}")
-                try:
-                    if command == "\n":
-                        self._channel.send("\n")
-                    self._channel.send(command + "\n")
-                except Exception as e:
-                    self._logger.error(f"Error in send_command: {e}")
-                    raise e
+                print(f"Sending command: {command}")
+                self._channel.send(command + "\n")
 
                 if self._prompt_failure:
                     result = self._read_until(expect, timeout, expect_occurrences)
                 else:
-                    # If prompt failure is set to False, we'll use a different approach
                     result = self._read_with_timeout(timeout)
 
                 if self._scrub_esc:  # Scrub escape characters if the flag is set
                     result = self._scrub_escape_characters(result)
 
-                # self._logger.debug(f"Received response for command '{command}': {result}")
+                # print(f"Received response for command '{command}': {result}")
                 return result
             except Exception as e:
-                self._logger.error(f"Exception during send_command: {e}")
+                print(f"Exception during send_command: {e}")
                 raise RuntimeError(f"Failed to send command '{command}': {e}")
 
     def send_commands(self, commands: List[str], expect: Union[str, Pattern], timeout: float = 10,
@@ -309,7 +342,7 @@ class ThreadSafeSSHConnection:
             expect = re.compile(re.escape(expect))
 
         self._channel.settimeout(timeout)
-        self._logger.debug(f"Waiting for pattern '{expect.pattern}' {expect_occurrences} times")
+        print(f"Waiting for pattern '{expect.pattern}' {expect_occurrences} times")
 
         start_time = time.time()
         while True:
@@ -320,25 +353,24 @@ class ThreadSafeSSHConnection:
                 buffer += chunk
                 self._accumulation_buffer += chunk
                 self._output_buffer += chunk
-                # self._logger.debug(f"Received chunk: {chunk}")
+                # print(f"Received chunk: {chunk}")
 
                 if expect.search(self._accumulation_buffer):
                     occurrences += 1
-                    self._logger.debug(f"Pattern '{expect.pattern}' occurrence {occurrences} found")
+                    print(f"Pattern '{expect.pattern}' occurrence {occurrences} found")
                     if occurrences >= expect_occurrences:
                         return self._accumulation_buffer
 
                 if time.time() - start_time > timeout:
                     raise TimeoutError(f"Timeout waiting for '{expect.pattern}' after {occurrences} occurrences")
             except SocketTimeout:
-                self._logger.error("Socket timeout while waiting for pattern")
+                print("Socket timeout while waiting for pattern")
                 raise TimeoutError(f"Timeout waiting for '{expect.pattern}' after {occurrences} occurrences")
             except Exception as e:
-                self._logger.error(f"Exception in _read_until: {e}")
+                print(f"Exception in _read_until: {e}")
                 raise RuntimeError(f"Error reading from channel: {e}")
 
     def _read_with_timeout(self, timeout: float) -> str:
-        
         buffer = ""
         start_time = time.time()
         self._channel.settimeout(timeout)
@@ -351,8 +383,7 @@ class ThreadSafeSSHConnection:
                 buffer += chunk
                 self._accumulation_buffer += chunk
                 self._output_buffer += chunk
-                # if self.debug_output:
-                #     self._logger.debug(f"Received chunk: {chunk}")
+                # print(f"Received chunk: {chunk}")
 
                 # Check if we've received the full output
                 if "\n" in buffer and not self._channel.recv_ready():
@@ -361,18 +392,18 @@ class ThreadSafeSSHConnection:
                         return buffer
 
                 if time.time() - start_time > timeout:
-                    raise TimeoutError(f"Timeout waiting for command output")
+                    raise TimeoutError("Timeout waiting for command output")
             except SocketTimeout:
-                self._logger.error("Socket timeout while waiting for output")
-                raise TimeoutError(f"Timeout waiting for command output")
+                print("Socket timeout while waiting for output")
+                raise TimeoutError("Timeout waiting for command output")
             except Exception as e:
-                self._logger.error(f"Exception in _read_with_timeout: {e}")
+                print(f"Exception in _read_with_timeout: {e}")
                 raise RuntimeError(f"Error reading from channel: {e}")
 
     def _scrub_escape_characters(self, text: str) -> str:
         """Removes ANSI escape sequences and other control characters from the text."""
-        if debug:
-            self._logger.debug("Scrubbing escape characters from output.")
+        if self.debug_output:
+            print("Scrubbing escape characters from output.")
         ansi_escape = re.compile(r'(?:\x1B[@-_][0-?]*[ -/]*[@-~])')
         return ansi_escape.sub('', text)
 
@@ -406,27 +437,12 @@ class ThreadSafeSSHConnection:
         with self._lock:
             self._client.set_log_channel(name)
 
-
-# Usage example with debug mode enabled:
-# if __name__ == "__main__":
-#     try:
-#         with ThreadSafeSSHConnection("10.201.42.1", debug=False, prompt_failure=False, scrub_esc=True) as ssh:
-#             ssh.set_displayname("CA-0492-ION-01")
-#             ssh._logger.debug("Attempting to connect...")
-#             ssh.connect("rtradmin", "Th!$istheW@y")
-#             ssh._logger.debug("Connected successfully. Sending commands...")
-#             output1 = ssh.send_commands(["set paging off", "dump vpn summary"], expect="CA-0492-ION-01#",
-#                                        expect_occurrences=[6, 40])
-#             buffer_count = 0
-#             for buffer in output1:
-#                 buffer_count += 1
-#                 print(f"Command output [buffer: {buffer_count}]: {output1[buffer_count - 1]}")
-#
-#             output2 = ssh.send_command("dump config network", expect="CA-0492-ION-01#", expect_occurrences=1)
-#             print(output2)
-#
-#     except Exception as e:
-#         print(f"An error occurred: {e}")
-#         import traceback
-#
-#         traceback.print_exc()
+if __name__ == "__main__":
+    try:
+        ssh_conn = ThreadSafeSSHConnection("172.16.101.100", debug=True)
+        ssh_conn.connect("cisco", "cisco")
+        output = ssh_conn.send_command("show users", expect='#', timeout=5)
+        print(output)
+        ssh_conn.disconnect()
+    except Exception as e:
+        print(f"An error occurred: {e}")

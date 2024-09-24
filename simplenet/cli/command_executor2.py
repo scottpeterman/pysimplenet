@@ -11,6 +11,8 @@ import time
 
 from simplenet.cli.lib.audit_loop_actions import handle_audit_action_loop
 from simplenet.cli.lib.config_actions import execute_send_config
+from simplenet.cli.lib.handle_restapi import handle_rest_api_action
+from simplenet.cli.lib.handle_restapi_loop import handle_rest_api_loop
 from simplenet.cli.lib.handle_send_config_loop import handle_send_config_loop
 from simplenet.cli.lib.send_commands_action import handle_send_command_action
 from simplenet.cli.lib.audit_actions import print_pretty, handle_audit_action, \
@@ -182,6 +184,26 @@ def execute_commands(ssh_connection: ThreadSafeSSHConnection, actions, variables
             continue
         # Handle 'send_command' action
             # Handle 'send_command' action
+
+        if (action['action'] == 'rest_api') and not stop_device_commands:
+            global_output, stop_device_commands = handle_rest_api_action(
+                action, resolved_vars, log_file, pretty, timestamps, stop_device_commands,
+                global_output, error_string, global_data_store, debug_output
+            )
+            action_index += 1
+            global_data_store.signal_global_data_updated.emit(json.dumps(global_data_store.get_all_data(), indent=2))
+
+            continue
+
+        if (action['action'] == 'rest_api_loop') and not stop_device_commands:
+            global_output, stop_device_commands = handle_rest_api_loop(
+                action_index, action, resolved_vars, log_file, pretty, timestamps, stop_device_commands,
+                global_output, global_prompt_count, inter_command_time, error_string, device_name,
+                global_data_store, debug_output
+            )
+            action_index += 1
+            global_data_store.signal_global_data_updated.emit(json.dumps(global_data_store.get_all_data(), indent=2))
+            continue
 
         if (action['action'] == 'send_command') and not stop_device_commands:
             global_output, stop_device_commands = handle_send_command_action(action_index,

@@ -1,0 +1,51 @@
+drivers:
+  flask_test:
+    error_string: "400"  # Use a generic error code for failures
+    actions:
+      # 1. Action to log in and store the JWT token
+      - action: "rest_api"
+        display_name: "Login to Flask API"
+        method: "POST"
+        url: "http://127.0.0.1:5000/login"
+        verify: "false"
+        headers:
+          Content-Type: "application/json"
+        body:
+          username: "testuser"
+          password: "password123"
+        expect: "200"
+        store_query:
+          query: "access_token"  # Retrieve the JWT token from the login response
+          variable_name: "jwt_token"  # Store the token in the global data store
+
+      # 2. Action to retrieve all devices and store their IDs
+      - action: "rest_api"
+        display_name: "Get Device List"
+        method: "GET"
+        url: "http://127.0.0.1:5000/devices"
+        verify: "false"
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer action_variables.jwt_token"  # Use the stored JWT token
+        expect: "200"
+        store_query:
+          query: "[]"  # Store the list of device IDs
+          variable_name: "device_ids"
+
+      # 3. Loop action to retrieve each device separately
+      - action: "rest_api_loop"
+        display_name: "Retrieve Each Device"
+        method: "GET"
+        url: "http://127.0.0.1:5000/devices/[{ id }]"  # The URL will dynamically use the device_id
+        verify: "false"
+        headers:
+          Content-Type: "application/json"
+          Authorization: "Bearer action_variables.jwt_token"  # Use the stored JWT token
+        variable_name: "device_ids"  # The global variable containing the device IDs
+        key_to_loop: "id"  # Loop over the device IDs
+        expect: "200"
+        store_query:
+          query: "name"  # Store the device name from each response
+          variable_name: "device_names"
+        output_path: "./output/device_details.json"
+        output_mode: "overwrite"  # Overwrite the file for each new run

@@ -1,0 +1,40 @@
+drivers:
+  cisco_ios:
+    error_string: "Invalid input detected"
+    output_path: "./output/{{ hostname }}_version_check.txt"
+    output_mode: "append"
+    prompt_count: 4
+    actions:
+      - action: "send_command"
+        display_name: "Set Terminal Length"
+        command: "term len 0"
+        expect: "#"
+
+
+      - action: "send_command"
+        display_name: "Show CDP Neighbors Detail"
+        command: "show cdp neighbors detail"
+        expect: "#"
+        output_path: "./output/{{ hostname }}_cdp_neighbors.txt"
+        output_mode: "overwrite"
+        ttp_path: "./project/templates/ios_show_cdp_neighbors.ttp"
+        store_query:
+          query: "[][]"
+          variable_name: "cdp_neighbors"
+
+      - action: "send_command_loop"
+        display_name: "Loop Through Interfaces"
+        variable_name: "cdp_neighbors"
+        key_to_loop: "interface"
+        command_template: "show interface {{ interface }}"
+        expect: "#"
+        output_path: "./output/{{ hostname }}_interface_details.txt"
+        output_mode: "append"
+        parse_output: true
+        use_named_list:
+          list_name: "interface_mtu"
+          item_key: "mtu"
+          ttp_path: "./project/templates/interface_mtu_switch.ttp"
+          store_query:
+            query: "[][]"
+            variable_name: "interface_mtu"

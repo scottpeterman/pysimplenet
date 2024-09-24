@@ -1,0 +1,3 @@
+ NXOS: version {{ version_string }}
+  NXOS image file is: {{ image_file }}
+Kernel uptime is {{ uptime_days }} day(s), {{ uptime_detail | ORPHRASE }}

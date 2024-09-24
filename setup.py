@@ -12,7 +12,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pysimplenet",  # Replace with your actual project name
-    version="0.1.0",  # Replace with your actual version
+    version="0.1.3",  # Replace with your actual version
     author="Scott Peterman",
     author_email="scottpeterman@gmail.com",
     description="Pysimplenet, automation tools for network engineers",
@@ -35,7 +35,7 @@ setup(
             'simplenet=simplenet.cli.simplenet:main',
             'vsndebug=simplenet.gui.vsndebug:main',
             'simplenet-gui=simplenet.gui.main_gui:main',
-
+            'simplenet-runner=simplenet.runner:main',  # Added runner.py entry point
         ],
     },
     package_data={

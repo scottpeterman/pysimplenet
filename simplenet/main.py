@@ -1,8 +1,26 @@
 import sys
+import os
 from PyQt6.QtWidgets import QApplication
 from simplenet.gui.main_gui import DriverEditor
 
+
+def ensure_directories_exist():
+    # List of required directories
+    directories = ["log", "project", "output"]
+
+    # Iterate through the list and create any missing directories
+    for directory in directories:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+            print(f"Directory '{directory}' created.")
+        else:
+            print(f"Directory '{directory}' already exists.")
+
+
 def main():
+    # Ensure the required directories exist before launching the application
+    ensure_directories_exist()
+
     app = QApplication(sys.argv)
     editor = DriverEditor()
 
@@ -32,6 +50,7 @@ def main():
 
     editor.show()
     sys.exit(app.exec())
+
 
 if __name__ == "__main__":
     main()

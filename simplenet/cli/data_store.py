@@ -1,10 +1,10 @@
 import json
 import logging
-
 from PyQt6.QtCore import pyqtSignal, QObject
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 debug = False
+
 class DeviceSession:
     def __init__(self):
         self.data = {}  # Store data associated with TTP paths and action indices
@@ -12,67 +12,25 @@ class DeviceSession:
         self.action_variables = {}  # Store action variables (results of store_query)
 
     def update(self, ttp_path, action_index, parsed_data):
-        """
-        Update the session with parsed data.
-
-        Args:
-            ttp_path (str): The path of the TTP template or identifier.
-            action_index (int): The index of the action being executed.
-            parsed_data (any): The parsed data to store.
-        """
         if ttp_path not in self.data:
             self.data[ttp_path] = {}
         self.data[ttp_path][action_index] = parsed_data
 
     def get_device_data(self):
-        """
-        Get all data for the device session.
-
-        Returns:
-            dict: A dictionary representing the device data.
-        """
         return dict(self.data)
 
     def add_audit_report(self, audit_result):
-        """
-        Add an audit report result to the session.
-
-        Args:
-            audit_result (any): The audit result to store.
-        """
         self.audit_report.append(audit_result)
 
     def get_audit_report(self):
-        """
-        Retrieve all audit reports.
-
-        Returns:
-            list: A list of audit reports.
-        """
         return list(self.audit_report)
 
     def set_variable(self, variable_name, value):
-        """
-        Store a variable in the session data store.
-
-        Args:
-            variable_name (str): The name of the variable.
-            value: The value to store.
-        """
         self.action_variables[variable_name] = value
         if debug:
             logging.debug(f"Set variable '{variable_name}' with value: {value} in device session.")
 
     def get_variable(self, variable_name):
-        """
-        Retrieve a variable from the session data store.
-
-        Args:
-            variable_name (str): The name of the variable to retrieve.
-
-        Returns:
-            The value of the variable if found; otherwise, None.
-        """
         return self.action_variables.get(variable_name)
 
 
@@ -86,15 +44,6 @@ class SessionBasedDataStore:
         return self.sessions[device_name]
 
     def update(self, device_name, ttp_path, action_index, parsed_data):
-        """
-        Update the session for the specified device with parsed data.
-
-        Args:
-            device_name (str): The name of the device.
-            ttp_path (str): The TTP path or identifier.
-            action_index (int): The index of the action.
-            parsed_data (any): The parsed data to store.
-        """
         session = self.get_or_create_session(device_name)
         session.update(ttp_path, action_index, parsed_data)
 
@@ -117,23 +66,31 @@ class SessionBasedDataStore:
         session = self.get_or_create_session(device_name)
         session.set_variable(variable_name, value)
 
-
-
     def get_variable(self, device_name, variable_name):
         session = self.get_or_create_session(device_name)
         return session.get_variable(variable_name)
 
 
 class GlobalDataStoreWrapper(QObject):
+    _instance = None  # Class-level variable to hold the Singleton instance
+
     signal_global_data_updated = pyqtSignal(str)
 
-    def __init__(self):
-        super().__init__()  # Ensure QObject is initialized
+    def __new__(cls, *args, **kwargs):
+        # Ensure only one instance is created (Singleton pattern)
+        if cls._instance is None:
+            cls._instance = super(GlobalDataStoreWrapper, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
 
-        self.session_store = SessionBasedDataStore()
-        self.current_device = None
-        if debug:
-            logging.debug("GlobalDataStoreWrapper initialized")
+    def __init__(self):
+        # Ensure that QObject is initialized once
+        if not hasattr(self, '_initialized'):  # Prevent __init__ from being called multiple times
+            super().__init__()  # Ensure QObject is initialized
+            self.session_store = SessionBasedDataStore()
+            self.current_device = None
+            if debug:
+                logging.debug("GlobalDataStoreWrapper initialized")
+            self._initialized = True  # Mark this instance as initialized
 
     def update(self, device_name, ttp_path, action_index, parsed_data):
         if debug:
@@ -164,20 +121,36 @@ class GlobalDataStoreWrapper(QObject):
             logging.debug(f"Command result added for {device_name}")
 
     def get_device_data(self, device_name):
-        if debug:
-            logging.debug(f"Getting data for device: {device_name}")
         session = self.session_store.get_or_create_session(device_name)
-        data = session.data
-        if debug:
-            logging.debug(f"Retrieved data: {data}")
+        data = session.get_device_data()
+
+        # Ensure action_variables are included in the output
+        if 'action_variables' not in data:
+            data['action_variables'] = session.action_variables
+
         return data
 
     def get_all_data(self):
         if debug:
             logging.debug("Getting all data")
+
+        # Retrieve all sessions
         all_data = self.session_store.get_all_data()
+
+        # Ensure action_variables are included in each device's session
+        for device, session_data in all_data.items():
+            session = self.session_store.get_or_create_session(device)
+
+            # If action_variables are missing, add them from the session
+            if 'action_variables' not in session_data:
+                session_data['action_variables'] = session.action_variables
+
+            if debug:
+                logging.debug(f"Data for device {device}: {session_data}")
+
         if debug:
-            logging.debug(f"All data: {all_data}")
+            logging.debug(f"Final all data: {all_data}")
+
         return all_data
 
     def add_audit_report(self, audit_result):
@@ -199,13 +172,6 @@ class GlobalDataStoreWrapper(QObject):
         return self.session_store.get_audit_report(device_name)
 
     def set_variable(self, variable_name, value):
-        """
-        Store a variable in the global data store for the current device.
-
-        Args:
-            variable_name (str): The name of the variable.
-            value: The value to store.
-        """
         if self.current_device is None:
             logging.error("Current device not set. Call set_current_device() first.")
             raise ValueError("Current device not set. Call set_current_device() first.")
@@ -222,19 +188,9 @@ class GlobalDataStoreWrapper(QObject):
         session.data['action_variables'][variable_name] = value
 
         if debug:
-            logging.debug(
-                f"Set variable '{variable_name}' with value: {value} for device {self.current_device} in both session and global store.")
+            logging.debug(f"Set variable '{variable_name}' with value: {value} for device {self.current_device}")
 
     def get_variable(self, variable_name):
-        """
-        Retrieve a variable from the global data store for the current device.
-
-        Args:
-            variable_name (str): The name of the variable to retrieve.
-
-        Returns:
-            The value of the variable if found; otherwise, None.
-        """
         if self.current_device is None:
             logging.error("Current device not set. Call set_current_device() first.")
             raise ValueError("Current device not set. Call set_current_device() first.")

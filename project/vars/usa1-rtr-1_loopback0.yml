@@ -1,0 +1,4 @@
+ip_address: "192.168.1.1"
+subnet_mask: "255.255.255.0"
+description: "Test Loopback"
+hostname: "usa1-rtr-1"

@@ -1,0 +1,1 @@
+{{ ap_name }}  {{ base_id }}  {{ mac }}  {{ auth }}     {{ assoc }}      {{ aid }}    {{ i_int }}    {{essid}}  {{ vlan_id }}       {{ tunnel_id }}    {{ phy }}     {{ assoc_time }}     {{ dump }}          {{ flags }}        {{ moves }}                     {{ phy_cap }}

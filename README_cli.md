@@ -1,775 +1,331 @@
+# PySimpleNet CLI Usage Guide
 
-# Network Automation Solution
-
-A YAML-driven network automation solution that includes both CLI and GUI tools for managing network devices. This tool simplifies network configuration, auditing, and automation tasks by leveraging a structured YAML schema and a set of Python scripts.
+This guide provides detailed instructions on how to use the command-line interface (CLI) tools provided by PySimpleNet, focusing on the primary utility script `runner.py`. This script allows you to execute automation tasks across multiple devices concurrently, based on an inventory defined in YAML format.
 
 ## Table of Contents
 
-- [Features](#features)
+- [Overview](#overview)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-- [Usage](#usage)
-  - [Configuration](#configuration)
-  - [Schema Explanation](#schema-explanation)
-  - [Components](#components)
-    - [Runner Script (`runner.py`)](#1-runner-script-runnerpy)
-    - [Simplenet Module (`simplenet/cli/simplenet.py`)](#2-simplenet-module-simplenetclisimplenetpy)
-    - [Command Executor (`command_executor2.py`)](#3-command-executor-command_executor2py)
-    - [GUI Editor Tool (`driver_editor.py`)](#4-gui-editor-tool-driver_editorpy)
-    - [Debugger GUI Tool (`debugger.py`)](#5-debugger-gui-tool-debuggerpy)
+- [Command-Line Utility (`runner.py`)](#command-line-utility-runnerpy)
+  - [Usage](#usage)
+  - [Command-Line Options](#command-line-options)
   - [Examples](#examples)
+- [Workflow Explanation](#workflow-explanation)
+- [Detailed Functionality](#detailed-functionality)
+  - [1. Creating the SQLite Database](#1-creating-the-sqlite-database)
+  - [2. Device Reachability Check](#2-device-reachability-check)
+  - [3. Running Tasks for Each Device](#3-running-tasks-for-each-device)
+- [Logging and Output](#logging-and-output)
 - [Contributing](#contributing)
 - [License](#license)
-- [Additional Information](#additional-information)
-  - [Extending the Schema](#extending-the-schema)
-  - [GUI Usage](#gui-usage)
-    - [Editor GUI Tool](#editor-gui-tool)
-    - [Debugger GUI Tool](#debugger-gui-tool)
-  - [Code Structure and Workflow](#code-structure-and-workflow)
-    - [Workflow Overview](#workflow-overview)
-    - [File and Module Details](#file-and-module-details)
-  - [Troubleshooting](#troubleshooting)
-  - [Support](#support)
-  - [Frequently Asked Questions](#frequently-asked-questions)
+- [Support](#support)
 
-## Features
+## Overview
 
-- **YAML-Driven Configuration**: Easily define actions and workflows using YAML files.
-- **CLI and GUI Tools**: Choose between command-line interface or graphical user interface based on your preference.
-- **Device Drivers**: Support for multiple network device types (e.g., Cisco IOS).
-- **Automation Actions**: Send commands, loop through commands, audit configurations, and more.
-- **Extensible Schema**: Define custom actions and extend the existing schema as needed.
-- **Concurrent Execution**: Run tasks across multiple devices concurrently to save time.
-- **Data Persistence**: Use SQLite databases for inventory and device data management.
-- **Visual YAML Editor**: Use the GUI editor to create and modify YAML configuration files easily.
-- **Debugger Tool**: Visually debug and step through automation workflows.
+The `runner.py` script is the primary CLI utility in PySimpleNet. It orchestrates the execution of automation tasks across multiple devices by:
+
+- Converting a YAML inventory file into a SQLite database for efficient querying.
+- Allowing you to specify SQL queries to select devices from the inventory.
+- Running automation tasks concurrently across multiple devices.
+- Logging outputs, errors, and connection failures for troubleshooting.
 
 ## Prerequisites
 
-- Python 3.9 or higher
-- Required Python packages (listed in `requirements.txt`)
-- Access to network devices (e.g., Cisco IOS devices)
-- SSH connectivity to target devices
-- PyQt6 (for GUI tools)
+- Python 3.9 or higher.
+- Required Python packages (listed in `requirements.txt`).
+- Access to network devices (e.g., Cisco IOS devices).
+- SSH connectivity to target devices.
+- PySimpleNet installed (either via `pip` or cloned from GitHub).
 
 ## Installation
 
-1. **Clone the Repository**
+If you haven't installed PySimpleNet yet, you can do so via `pip`:
 
-   ```bash
-   git clone https://github.com/yourusername/network-automation-solution.git
+```bash
+pip install pysimplenet
+```
 
-2. Navigate to the Project Directory
+Alternatively, clone the repository and install dependencies:
 
-cd network-automation-solution
-
-
-3. Install Dependencies
-
+```bash
+git clone https://github.com/scottpeterman/pysimplenet.git
+cd pysimplenet
 pip install -r requirements.txt
+```
 
+## Command-Line Utility (`runner.py`)
 
+### Usage
 
-Usage
+The `runner.py` script accepts several command-line options to customize its behavior. Below is the general usage pattern:
 
-Configuration
+```bash
+python runner.py [OPTIONS]
+```
 
-All configurations are done through YAML files. Below is a sample configuration for a Cisco IOS device:
+### Command-Line Options
 
+- `--inventory`: **(Required)** Path to the YAML file containing the inventory.
+- `--query`: **(Required)** SQL query to execute on the inventory data.
+- `--driver`: **(Required)** Path to the driver YAML file that defines automation actions.
+- `--vars`: Path to the variables YAML file (optional).
+- `--driver-name`: Driver name to use (default: `cisco_ios`).
+- `--timeout`: Command timeout in seconds (default: `10`).
+- `--prompt`: Prompt to look for (optional).
+- `--prompt-count`: Number of prompts to expect (default: `1`).
+- `--look-for-keys`: Look for SSH keys for authentication (flag).
+- `--timestamps`: Add timestamps to output (flag).
+- `--inter-command-time`: Time to wait between commands in seconds (default: `1.0`).
+- `--pretty`: Enable pretty output (flag).
+- `--output-root`: Root directory for all output files (default: `./output`).
+- `--num-processes`: Number of processes to run concurrently (default: `4`).
+
+### Examples
+
+#### Example 1: Run Automation on All Devices
+
+```bash
+python runner.py \
+  --inventory project/inventory/home_inventory.yaml \
+  --query "SELECT * FROM devices" \
+  --driver project/drivers/tests/cdp_interfaces_audit.yml \
+  --vars project/vars/global_vars.yml \
+  --driver-name cisco_ios \
+  --timeout 15 \
+  --prompt "#" \
+  --prompt-count 2 \
+  --inter-command-time 1.0 \
+  --pretty \
+  --output-root ./output \
+  --num-processes 4
+```
+
+#### Example 2: Run Automation on Specific Devices
+
+```bash
+python runner.py \
+  --inventory project/inventory/home_inventory.yaml \
+  --query "SELECT * FROM devices WHERE role_id = 2" \
+  --driver project/drivers/tests/linux.yml \
+  --driver-name linux \
+  --timeout 10 \
+  --prompt "$" \
+  --num-processes 2
+```
+
+#### Example 3: Use Variables File and Look for SSH Keys
+
+```bash
+python runner.py \
+  --inventory project/inventory/home_inventory.yaml \
+  --query "SELECT * FROM devices WHERE hostname LIKE 'router%'" \
+  --driver project/drivers/tests/configure_routes_home.yml \
+  --vars project/vars/router_vars.yml \
+  --driver-name cisco_ios \
+  --timeout 20 \
+  --look-for-keys \
+  --timestamps \
+  --output-root ./output \
+  --num-processes 3
+```
+
+## Workflow Explanation
+
+1. **Inventory Processing**: The script reads the specified YAML inventory file and converts it into a SQLite database (`.db` file). This database includes tables for devices, credentials, platforms, roles, sites, and vendors.
+
+2. **SQL Query Execution**: The provided SQL query is executed against the SQLite database to select the devices you want to run automation tasks on.
+
+3. **Device Reachability Check**: Before executing tasks, the script checks if each device is reachable on port 22 (SSH).
+
+4. **Concurrent Execution**: The script uses `ProcessPoolExecutor` to run tasks across multiple devices concurrently. The number of concurrent processes is controlled by the `--num-processes` option.
+
+5. **Automation Execution**: For each device, the script runs the `simplenet` module, passing the necessary parameters.
+
+6. **Logging and Output**: Outputs are logged to the console and can be saved to files specified in your driver configurations.
+
+## Detailed Functionality
+
+### 1. Creating the SQLite Database
+
+The `create_sqlite_db` function reads the inventory YAML file and creates a SQLite database for efficient querying.
+
+- **Tables Created**:
+  - `devices`
+  - `credentials`
+  - `platforms`
+  - `roles`
+  - `sites`
+  - `vendors`
+  - `device_credentials`
+- **View Created**:
+  - `device_details`: Joins devices with related tables for easier querying.
+
+### 2. Device Reachability Check
+
+Before executing any automation tasks, the script checks if each device is reachable on port 22 using the `check_device_reachability` function.
+
+- If a device is not reachable, it's logged to `connection_failures.log`.
+- The script skips unreachable devices to save time.
+
+### 3. Running Tasks for Each Device
+
+For each device that passes the reachability check:
+
+- The `run_for_device` function constructs a command to execute the `simplenet` module with appropriate parameters.
+- The command includes options like inventory database path, device-specific query, driver file, driver name, timeouts, prompts, etc.
+- The function uses `subprocess.Popen` to execute the command and streams the output in real-time.
+- Exit codes are checked to determine if the execution was successful. Non-zero exit codes are logged to `error.log`.
+
+## Logging and Output
+
+- **Standard Output**: The script prints progress and execution details to the console.
+- **Logs**:
+  - `error.log`: Records devices that returned a non-zero exit code.
+  - `connection_failures.log`: Records devices that are unreachable on port 22.
+- **Output Files**: Outputs from automation tasks are saved to files as specified in your driver configurations, typically under the `./output` directory.
+
+## Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](https://github.com/scottpeterman/pysimplenet/blob/main/CONTRIBUTING.md) for guidelines on how to get involved.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
+
+## Support
+
+For support or questions, please open an issue on the [GitHub repository](https://github.com/scottpeterman/pysimplenet/issues) or contact us at [scottpeterman@gmail.com](mailto:scottpeterman@gmail.com).
+
+---
+
+**Note**: Ensure that the paths and filenames used in the examples match your actual project structure.
+
+---
+
+# Additional Details
+
+## Command-Line Options Explained
+
+- **`--inventory`**: Path to your inventory YAML file. This file should contain details about your devices, credentials, platforms, roles, sites, and vendors.
+
+- **`--query`**: SQL query to select devices from the inventory database. For example, `SELECT * FROM devices WHERE platform_id = 1`.
+
+- **`--driver`**: Path to the driver YAML file that defines the automation actions to be performed on each device.
+
+- **`--vars`**: (Optional) Path to a variables YAML file. This can include global variables or device-specific variables used in your driver templates.
+
+- **`--driver-name`**: Specifies which driver to use from your driver YAML file, if multiple are defined. Default is `cisco_ios`.
+
+- **`--timeout`**: Command timeout in seconds. Adjust this based on network latency and the expected response time of your devices.
+
+- **`--prompt`**: The expected command prompt on your devices. This helps the script know when a command has completed.
+
+- **`--prompt-count`**: Number of prompts to expect during command execution. This can help in scenarios where multiple prompts are involved.
+
+- **`--look-for-keys`**: If set, the script will attempt to use SSH keys for authentication, in addition to passwords specified in the inventory.
+
+- **`--timestamps`**: If set, timestamps will be added to the output, which can be helpful for logging and auditing purposes.
+
+- **`--inter-command-time`**: Time in seconds to wait between commands. Useful if devices require a short delay between commands.
+
+- **`--pretty`**: Enables pretty output formatting, which can make logs and outputs easier to read.
+
+- **`--output-root`**: Root directory where output files will be saved. Default is `./output`.
+
+- **`--num-processes`**: Number of concurrent processes to run. Increasing this can speed up execution but may consume more system resources.
+
+## Understanding the Workflow
+
+1. **Start Time Logging**: The script logs the start time of the execution for benchmarking purposes.
+
+2. **Inventory Conversion**: The YAML inventory is converted to a SQLite database, which allows for complex SQL queries and efficient data access.
+
+3. **SQL Query Execution**: The specified SQL query is executed against the database to fetch the list of devices.
+
+4. **Device Processing Loop**: For each device:
+
+   - **Reachability Check**: The script checks if the device is reachable on port 22.
+   - **Command Construction**: A command is constructed to run the `simplenet` module with device-specific parameters.
+   - **Subprocess Execution**: The command is executed using a subprocess, and the output is streamed to the console.
+   - **Error Handling**: Non-zero exit codes are logged, and failed devices are counted.
+
+5. **Concurrent Execution**: The `ProcessPoolExecutor` is used to run device tasks concurrently, controlled by the `--num-processes` option.
+
+6. **Completion Logging**: The script logs the stop time and calculates the total execution time.
+
+7. **Summary Output**: A summary is printed, showing the number of devices processed, failed devices, and execution times.
+
+## Tips for Effective Use
+
+- **Adjust Concurrency**: Experiment with the `--num-processes` option to find the optimal concurrency level for your system.
+
+- **Use Specific Queries**: Tailor your SQL queries to target specific groups of devices, reducing unnecessary load and focusing on relevant tasks.
+
+- **Monitor Logs**: Regularly check `error.log` and `connection_failures.log` to troubleshoot issues.
+
+- **Customize Timeouts**: Adjust `--timeout` and `--inter-command-time` based on your network conditions and device responsiveness.
+
+- **Secure Your Credentials**: Ensure that sensitive information like passwords is securely managed and, if possible, use SSH keys (`--look-for-keys`).
+
+- **Leverage Variables**: Use the `--vars` option to pass variables that can be used within your driver templates for dynamic content.
+
+- **Test Drivers Individually**: Before running tasks across multiple devices, test your driver configurations on a single device to ensure they work as expected.
+
+## Example Inventory YAML Structure
+
+```yaml
+devices:
+  - id: 1
+    hostname: "router1"
+    mgmt_ip: "192.168.1.1"
+    model: "ISR4451"
+    serial_number: "FTX1234X1YZ"
+    timestamp: "2023-09-25T12:34:56"
+    platform_id: 1
+    role_id: 1
+    site_id: 1
+    vendor_id: 1
+    credential_ids:
+      - 1
+credentials:
+  - id: 1
+    name: "default_credential"
+    username: "admin"
+    password: "password123"
+platforms:
+  - id: 1
+    name: "cisco_ios"
+roles:
+  - id: 1
+    name: "core_router"
+sites:
+  - id: 1
+    name: "HQ"
+    location: "New York"
+vendors:
+  - id: 1
+    name: "Cisco"
+```
+
+## Example Driver YAML Structure
+
+```yaml
 drivers:
   cisco_ios:
     error_string: "Invalid input detected"
-    output_path: "./output/{{ hostname }}_version_check.txt"
+    output_path: "./output/{{ hostname }}_output.txt"
     output_mode: "append"
-    prompt_count: 4
+    prompt_count: 2
     actions:
       - action: "send_command"
-        display_name: "Set Terminal Length"
-        command: "term len 0"
+        display_name: "Show Version"
+        command: "show version"
         expect: "#"
-      # Additional actions...
-
-Schema Explanation
-
-The schema defines the structure of the YAML configuration files used by the automation tool. Below is an overview of the schema and its components:
-
-Actions
-
-send_command: Sends a single command to the device.
-
-Fields:
-
-display_name (required): A friendly name for the action.
-
-command (required): The command to execute.
-
-expect (required): The expected prompt after command execution.
-
-output_path (optional): File path to save the command output.
-
-output_mode (optional): Either append or overwrite.
-
-ttp_path (optional): Path to the TTP template for parsing output.
-
-store_query (optional): Stores parsed data into variables.
-
-Fields:
-
-query: The query to execute on the parsed data.
-
-variable_name: The name of the variable to store data.
-
-
-
-
-
-send_command_loop: Sends a command template in a loop based on variables.
-
-Fields:
-
-display_name: A friendly name for the action.
-
-variable_name: The variable to loop through.
-
-key_to_loop: The key within the variable to iterate over.
-
-command_template: The command template using placeholders.
-
-expect: The expected prompt after command execution.
-
-output_path (optional): File path to save the command output.
-
-output_mode: Either append or overwrite.
-
-parse_output: Boolean to parse the output.
-
-use_named_list (optional): Stores parsed data into a named list.
-
-Fields:
-
-list_name: Name of the list.
-
-item_key: Key for each item in the list.
-
-ttp_path: Path to the TTP template.
-
-store_query: Stores parsed data into variables.
-
-
-
-
-
-audit_loop: Audits configurations based on conditions.
-
-Fields:
-
-display_name: A friendly name for the action.
-
-policy_name: Name of the audit policy.
-
-variable_name: The variable containing data to audit.
-
-key_to_check: The key to check within the variable.
-
-target_value: The desired value for the key.
-
-query: The query to retrieve data.
-
-pass_if: Conditions for passing the audit.
-
-Fields:
-
-name: Name of the condition.
-
-check_type: Type of check (jmespath or regex).
-
-query: The query or regex pattern.
-
-key_to_check: The key within the data to check.
-
-operator: The operator for comparison.
-
-Fields:
-
-type: Operator type (is_equal or not_equal).
-
-value: Value to compare against.
-
-
-
-
-
-
-
-print_audit: Outputs the audit results.
-
-Fields:
-
-display_name: A friendly name for the action.
-
-output_file_path: File path to save the audit output.
-
-format: Output format (yaml, json, or both).
-
-
-
-
-Components
-
-The solution consists of several Python scripts and modules that work together to perform network automation tasks.
-
-1. Runner Script (runner.py)
-
-The runner script orchestrates the overall automation process by:
-
-Creating a SQLite Database: Converts the YAML inventory file into a SQLite database for efficient querying.
-
-Device Reachability Checks: Verifies if devices are reachable on port 22 (SSH) before attempting to connect.
-
-Concurrency Management: Uses ProcessPoolExecutor to run tasks across multiple devices concurrently.
-
-Logging and Error Handling: Logs errors and connection failures to specified log files.
-
-Command-Line Interface: Uses Click for a user-friendly CLI to accept various parameters.
-
-
-Key Functions:
-
-create_sqlite_db(yaml_file, db_file): Converts YAML inventory to SQLite database.
-
-check_device_reachability(hostname): Checks if the device is reachable over SSH.
-
-run_for_device(row, db_file, ...): Executes automation tasks for a single device.
-
-query_yaml(): The main Click command that ties everything together.
-
-
-Usage Example:
-
-python runner.py --inventory inventory.yaml --query "SELECT * FROM devices" --driver driver.yaml
-
-2. Simplenet Module (simplenet/cli/simplenet.py)
-
-This module handles the execution of automation tasks for individual devices:
-
-SSH Connections: Establishes SSH connections to devices using credentials from the database.
-
-Variable Rendering: Loads variables and renders driver templates using Jinja2.
-
-Command Execution: Executes commands defined in the driver actions.
-
-Data Storage: Uses a global data store to keep track of variables and results across actions.
-
-Error Handling: Catches exceptions and logs errors for troubleshooting.
-
-
-Key Functions:
-
-load_variables_and_render_driver(vars_file, driver_file, device_info): Loads and renders driver templates.
-
-get_device_credentials(device_id, db_conn): Retrieves credentials for a device from the database.
-
-run_automation_for_device(device, driver_file, ...): Runs automation tasks for a single device.
-
-main(): The main Click command for single-device automation.
-
-
-Usage Example:
-
-python -m simplenet.cli.simplenet --inventory devices.db --query "SELECT * FROM devices WHERE id=1" --driver driver.yaml
-
-3. Command Executor (command_executor2.py)
-
-The command executor handles the execution of individual actions defined in the driver:
-
-Action Handlers: Supports various action types like send_command, send_command_loop, audit, and more.
-
-Prompt Management: Manages prompts and counts to ensure commands are executed in the correct context.
-
-Output Handling: Handles output modes (overwrite, append) and saves command outputs to files.
-
-Global Data Store Integration: Updates the global data store with results and variables from actions.
-
-Debugging and Logging: Provides debug outputs and writes logs for each action executed.
-
-
-Key Functions:
-
-execute_commands(ssh_connection, actions, variables, ...): Main function to execute a list of actions.
-
-handle_send_command_action(...): Handles the execution of send_command actions.
-
-handle_send_command_loop(...): Handles the execution of send_command_loop actions.
-
-handle_audit_action(...): Performs audit checks based on conditions.
-
-handle_print_audit_action(...): Outputs audit results in specified formats.
-
-
-Usage:
-
-This module is typically called internally by the simplenet module and is not run directly.
-
-4. GUI Editor Tool (driver_editor.py)
-
-The GUI Editor is a PyQt6-based application that allows users to create and modify YAML configuration files in a user-friendly way.
-
-Features:
-
-Visual YAML Editing: Provides a form-based interface to create and edit actions without directly modifying YAML code.
-
-Schema Validation: Ensures that the YAML configurations conform to the predefined schema.
-
-Action Management: Add, remove, and reorder actions within the driver configurations.
-
-YAML Preview: Displays the current YAML configuration in real-time as you edit.
-
-File Operations: Open existing YAML files, save changes, and create new configurations.
-
-Integration with Runner: Launch automation runs directly from the editor.
-
-
-Key Components:
-
-DriverEditor Class: The main window that handles the overall layout and functionality.
-
-ActionEditor: A separate component imported from simplenet.gui.action_gui that provides the form fields for editing individual actions.
-
-RunnerForm: A form to configure and execute automation runs, imported from simplenet.gui.runner_form_basic.
-
-
-Usage Instructions:
-
-1. Launching the Editor
-
-Run the driver_editor.py script to start the GUI editor:
-
-python driver_editor.py
-
-
-2. Creating a New Driver Configuration
-
-Click on File > New or use the toolbar to add a new driver.
-
-Provide a name for the driver when prompted.
-
-
-
-3. Adding Actions
-
-Use the Add Action button to add a new action.
-
-Select the action type from the list (e.g., send_command, send_command_loop).
-
-Fill in the required fields in the form displayed on the right.
-
-
-
-4. Editing Actions
-
-Select an action from the list on the left to edit its details.
-
-The form fields will update to reflect the selected action.
-
-Make changes as needed, and the YAML preview will update accordingly.
-
-
-
-5. Removing Actions
-
-Select the action you wish to remove.
-
-Click the Remove Action button.
-
-
-
-6. Saving the Configuration
-
-Click on File > Save or Save As to save your configuration to a YAML file.
-
-
-
-7. Viewing YAML Preview
-
-Switch to the YAML Preview tab to see the generated YAML configuration.
-
-The preview updates in real-time as you make changes.
-
-
-
-8. Running Automation
-
-Click on Run > Run Automation to open the Runner Form.
-
-Configure the run parameters and execute the automation tasks directly from the editor.
-
-
-
-
-Notes:
-
-The editor validates the YAML configuration against the schema to prevent invalid configurations.
-
-The application provides helpful error messages if required fields are missing or invalid.
-
-
-5. Debugger GUI Tool (debugger.py)
-
-The Debugger GUI tool allows you to visually debug and step through your automation workflows.
-
-Features:
-
-Step-by-Step Execution: Execute actions one at a time to observe behavior.
-
-Variable Inspection: View the state of variables and data stores at each step.
-
-Breakpoint Setting: Set breakpoints on specific actions.
-
-Output Monitoring: See real-time output from devices as actions are executed.
-
-Error Handling: Catch and display errors with detailed traceback information.
-
-
-Usage Instructions:
-
-1. Launching the Debugger
-
-python debugger.py
-
-
-2. Loading a Configuration
-
-Open an existing YAML configuration file.
-
-The debugger will parse the file and display the actions.
-
-
-
-3. Setting Breakpoints
-
-Click on the action where you want to set a breakpoint.
-
-Use the context menu or a dedicated button to set or remove breakpoints.
-
-
-
-4. Starting Debugging
-
-Click on the Start button to begin execution.
-
-Use Next Step to execute actions one at a time.
-
-
-
-5. Inspecting Variables
-
-At any point, view the current state of variables and the data store.
-
-Variables are updated in real-time as actions are executed.
-
-
-
-6. Monitoring Output
-
-The output pane displays logs and device responses.
-
-Errors and exceptions are highlighted for easy identification.
-
-
-
-
-Notes:
-
-The debugger is particularly useful for testing and troubleshooting complex automation workflows.
-
-Ensure that you have the necessary access and permissions to connect to your devices during debugging.
-
-
-Sample Code Snippet (debugger.py):
-
-# (Include the code snippet you provided earlier)
-
-Examples
-
-Example: Sending a Command
-
-- action: "send_command"
-  display_name: "Check Device Version"
-  command: "show version"
-  expect: "#"
-  output_path: "./output/{{ hostname }}_version.txt"
-  output_mode: "overwrite"
-
-Example: Looping Through Interfaces
-
-- action: "send_command_loop"
-  display_name: "Collect Interface Details"
-  variable_name: "interfaces"
-  key_to_loop: "interface_name"
-  command_template: "show interface {{ interface_name }}"
-  expect: "#"
-  output_path: "./output/{{ hostname }}_interfaces.txt"
-  output_mode: "append"
-  parse_output: true
-
-Example: Auditing MTU Settings
-
-- action: "audit_loop"
-  display_name: "Check MTU for Interfaces"
-  policy_name: "MTU Compliance"
-  variable_name: "interface_details"
-  key_to_check: "mtu"
-  target_value: "1500"
-  query: '"{{ hostname }}".action_variables.interface_details[*].mtu'
-  pass_if:
-    - name: "MTU is 1500"
-      check_type: "jmespath"
-      query: "mtu"
-      key_to_check: "mtu"
-      operator:
-        type: "is_equal"
-        value: "1500"
-
-Running the Automation Tool
-
-1. Prepare the YAML Configuration
-
-Use the GUI Editor to create or modify your YAML configuration files. Ensure your configuration YAML file (e.g., config.yaml) is properly set up according to the schema.
-
-
-2. Prepare the Inventory File
-
-Create an inventory YAML file containing your devices, credentials, and other related data.
-
-
-3. Execute the Runner Script
-
-python runner.py --inventory inventory.yaml --query "SELECT * FROM devices" --driver driver.yaml --vars variables.yaml
-
-
-4. View Outputs
-
-Check the ./output/ directory for command outputs and audit results. Logs can be found in the ./log/ directory.
-
-
-
-Contributing
-
-We welcome contributions! Please read CONTRIBUTING.md for guidelines on how to get involved.
-
-License
-
-This project is licensed under the MIT License.
-
-Additional Information
-
-Extending the Schema
-
-You can add custom actions by extending the schema. For example, the custom_action allows you to define new behaviors:
-
-"custom_action": {
-  "fields": [
-    {"name": "custom_field1", "type": "text", "label": "Custom Field 1"},
-    {"name": "custom_field2", "type": "multiline_text", "label": "Custom Field 2"},
-    {"name": "custom_field3", "type": "choice", "label": "Custom Choice Field", "choices": ["option1", "option2", "option3"]}
-  ]
-}
-
-GUI Usage
-
-Editor GUI Tool
-
-The GUI Editor simplifies the process of creating and managing your YAML configuration files. It provides a visual interface where you can add actions, set parameters, and view the resulting YAML code.
-
-Launching the Editor:
-
-python driver_editor.py
-
-Features:
-
-Form-Based Editing: Edit actions using form fields rather than manually writing YAML.
-
-Drag-and-Drop Action Ordering: Rearrange actions by dragging them in the list.
-
-Schema Validation: Prevents invalid configurations by enforcing required fields.
-
-YAML Preview: Instantly see the YAML representation of your configuration.
-
-Integration with Automation Runner: Run your configurations directly from the editor.
-
-
-Notes:
-
-Ensure that you have PyQt6 installed to run the GUI tools.
-
-The editor supports multiple drivers, allowing you to manage configurations for different device types.
-
-
-Debugger GUI Tool
-
-The Debugger GUI tool allows you to visually debug and step through your automation workflows.
-
-Features:
-
-Step-by-Step Execution: Execute actions one at a time to observe behavior.
-
-Variable Inspection: View the state of variables and data stores at each step.
-
-Breakpoint Setting: Set breakpoints on specific actions.
-
-Output Monitoring: See real-time output from devices as actions are executed.
-
-Error Handling: Catch and display errors with detailed traceback information.
-
-
-Usage Instructions:
-
-1. Launching the Debugger
-
-python debugger.py
-
-
-2. Loading a Configuration
-
-Open an existing YAML configuration file.
-
-The debugger will parse the file and display the actions.
-
-
-
-3. Setting Breakpoints
-
-Click on the action where you want to set a breakpoint.
-
-Use the context menu or a dedicated button to set or remove breakpoints.
-
-
-
-4. Starting Debugging
-
-Click on the Start button to begin execution.
-
-Use Next Step to execute actions one at a time.
-
-
-
-5. Inspecting Variables
-
-At any point, view the current state of variables and the data store.
-
-Variables are updated in real-time as actions are executed.
-
-
-
-6. Monitoring Output
-
-The output pane displays logs and device responses.
-
-Errors and exceptions are highlighted for easy identification.
-
-
-
-
-Notes:
-
-The debugger is particularly useful for testing and troubleshooting complex automation workflows.
-
-Ensure that you have the necessary access and permissions to connect to your devices during debugging.
-
-
-Code Structure and Workflow
-
-The automation solution follows a modular approach, where each component plays a specific role in the overall workflow.
-
-Workflow Overview
-
-1. Inventory Preparation: Devices and credentials are defined in a YAML file.
-
-
-2. Database Creation: The runner script converts the YAML inventory into a SQLite database.
-
-
-3. Device Filtering: A SQL query filters the devices to target.
-
-
-4. Concurrent Execution: The runner script executes tasks across multiple devices concurrently.
-
-
-5. Automation Execution: For each device, the simplenet module executes the defined actions.
-
-
-6. Command Execution: The execute_commands function processes each action, interacts with the device, and collects outputs.
-
-
-7. Data Storage: Results are stored in the global data store and can be outputted as JSON or YAML.
-
-
-8. Reporting: Audit results and outputs are saved to files for review.
-
-
-9. Debugging: Use the Debugger GUI tool to step through workflows and troubleshoot issues.
-
-
-
-File and Module Details
-
-runner.py: Orchestrates the automation tasks across multiple devices.
-
-simplenet/cli/simplenet.py: Executes automation tasks for individual devices.
-
-simplenet/cli/command_executor2.py: Processes and executes each action defined in the driver.
-
-driver_editor.py: Provides a graphical interface for creating and editing driver YAML configurations.
-
-debugger.py: Allows users to debug automation workflows in a visual environment.
-
-
-Troubleshooting
-
-Invalid Input Detected: Ensure that your commands and expectations match the device's responses.
-
-Connection Timeouts: Verify network connectivity and device accessibility.
-
-Schema Validation Errors: Make sure your YAML files conform to the defined schema.
-
-Authentication Failures: Confirm that credentials are correctly associated with devices.
-
-GUI Issues: Ensure PyQt6 is properly installed if the GUI tools do not launch.
-
-
-Support
-
-For support or questions, please open an issue on the GitHub repository or contact us at support@example.com.
-
-Frequently Asked Questions
-
-How do I add a new device to the inventory?
-
-Add the device details to your inventory YAML file under the devices section. Include all required fields such as id, hostname, mgmt_ip, and associate the appropriate credential_ids.
-
-Can I use this tool with devices other than Cisco IOS?
-
-Yes, you can extend the schema and driver definitions to support other device types. Define new drivers and actions as needed.
-
-How do I handle devices that use different SSH ports?
-
-Currently, the script assumes SSH is on port 22. You can modify the check_device_reachability function and the SSH connection setup to specify different ports.
-
-Is there support for SNMP or other protocols?
-
-As of now, the tool primarily uses SSH for device communication. Support for other protocols can be added by extending the action handlers and communication modules.
-
-How can I contribute to the project?
-
-We welcome contributions! Please refer to the Contributing section for more details.
-
+        output_path: "./output/{{ hostname }}_version.txt"
+        output_mode: "overwrite"
+```
 
 ---
 
-Note: Remember to replace placeholders like yourusername, support@example.com, and the GitHub repository link with actual information relevant to your project.
-
-
----
-
-You can copy and paste this content into a markdown file. Let me know if you need any further assistance!
-
+By following this guide, you should be able to effectively use the `runner.py` CLI utility to automate tasks across your network devices using PySimpleNet.

@@ -589,7 +589,7 @@ class VisualDebugger(QMainWindow):
             self.automation_wrapper.run_automation()
 
             # Check for SSH connection and provide visual feedback
-            if self.automation_wrapper.ssh_conn and self.automation_wrapper.ssh_conn.is_connected:
+            if self.automation_wrapper.ssh_conn and self.automation_wrapper.ssh_conn.channel:
                 self.action_list_widget.item(0).setForeground(
                     Qt.GlobalColor.green)  # Set to green if connection succeeds
             else:

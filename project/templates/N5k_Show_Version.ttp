@@ -1,0 +1,2 @@
+  system:    version {{ version_string }}
+Kernel uptime is {{ uptime_days }} {{ remaining | ORPHRASE }}

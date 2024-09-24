@@ -1,0 +1,39 @@
+drivers:
+  cisco_ios:
+    error_string: "% Invalid input detected at '^' marker."
+    actions:
+      - action: send_command
+        command: term len 0
+        display_name: Set Terminal Length
+        expect: '#'
+      - action: "send_command"
+        display_name: Config Mode
+        command: "configure terminal"
+        expect: "\n"
+      - action: "send_config"
+        display_name: Send Config
+        config: |
+          ip route 10.200.0.0 255.255.0.0 {[ nexthop ]}
+          ip route 10.201.0.0 255.255.0.0 {[ nexthop ]}
+        # or config_template_path: './templates/static_routes.j2"
+        variables_path: "project/vars/{{hostname}}_static_routes.yaml"
+        expect: "config"
+        error_string: "Invalid input"
+      - action: "send_command"
+        display_name: End Config Mode
+        command: "end"
+        expect: "#"
+      - action: "send_command"
+        display_name: Save Config
+        command: "write memory"
+        expect: "confirm"
+      - action: "send_command"
+        display_name: Confirm
+        command: "\n"
+        expect: "#"
+      - action: "send_command"
+        display_name: End of Script
+        command: "sh run"
+        expect: "#"
+
+

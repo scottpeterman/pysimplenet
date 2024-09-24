@@ -13,6 +13,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction
 
 from simplenet.gui.action_schema import schema
+from simplenet.gui.forms.crud import CRUDWidget
+from simplenet.gui.forms.sqltool import SQLQueryWidget
 from simplenet.gui.help.drivers import show_drivers_help
 from simplenet.gui.pyeasyedit.EasyEditorWithMenu import EditorWithMenu
 from simplenet.gui.uglyplugin_parsers.uglyparsers2 import UglyParsingWidget
@@ -262,13 +264,21 @@ SimpleNet is a versatile, vendor-agnostic SSH automation solution designed for n
         toolbar.addAction(parsers_action)
 
         # Debugger Action
-        debugger_action = QAction("Open Debugger", self)
+        debugger_action = QAction("Debugger", self)
         debugger_action.triggered.connect(self.open_debugger)  # Connect to the method to open the debugger
         toolbar.addAction(debugger_action)
 
-        editor_action = QAction("Open Editor", self)
+        editor_action = QAction("Editor", self)
         editor_action.triggered.connect(self.open_editor)  # Connect to the method to open the editor
         toolbar.addAction(editor_action)
+
+        inventory_action = QAction("Inventory", self)
+        inventory_action.triggered.connect(self.open_inventory)  # Connect to the method to open the editor
+        toolbar.addAction(inventory_action)
+
+        sql_action = QAction("SQL", self)
+        sql_action.triggered.connect(self.open_sql)  # Connect to the method to open the editor
+        toolbar.addAction(sql_action)
 
     def parsers(self):
         self.parsers_tab = UglyParsingWidget(self)
@@ -287,6 +297,54 @@ SimpleNet is a versatile, vendor-agnostic SSH automation solution designed for n
             self.debugger_window.show()
         except Exception as e:
             print("Error opening debugger:")
+            print(e)
+
+    def open_inventory(self):
+        """
+        Opens the Inventory editor as a new tab in the main application.
+        """
+        try:
+            # Check if the inventory tab already exists
+            existing_tab_index = -1
+            if existing_tab_index == -1:  # If the tab does not exist, create it
+                # Instantiate the Editor widget
+                self.inventory_window = CRUDWidget()  # Use the correct class name
+
+                # Add the editor as a new tab in the main application's tab widget
+                self.tab_widget.addTab(self.inventory_window, "Inventory")
+
+                # Switch to the newly added tab
+                self.tab_widget.setCurrentWidget(self.inventory_window)
+            else:
+                # Switch to the existing tab if it's already open
+                self.tab_widget.setCurrentIndex(existing_tab_index)
+
+        except Exception as e:
+            print("Error opening EasyEdit editor:")
+            print(e)
+
+    def open_sql(self):
+        """
+        Opens the Inventory editor as a new tab in the main application.
+        """
+        try:
+            # Check if the sql tab already exists
+            existing_tab_index = -1
+            if existing_tab_index == -1:  # If the tab does not exist, create it
+                # Instantiate the SQL widget
+                self.sql_window = SQLQueryWidget()  # Use the correct class name
+
+                # Add the editor as a new tab in the main application's tab widget
+                self.tab_widget.addTab(self.sql_window, "SQL")
+
+                # Switch to the newly added tab
+                self.tab_widget.setCurrentWidget(self.sql_window)
+            else:
+                # Switch to the existing tab if it's already open
+                self.tab_widget.setCurrentIndex(existing_tab_index)
+
+        except Exception as e:
+            print("Error opening EasyEdit editor:")
             print(e)
 
     def open_editor(self):

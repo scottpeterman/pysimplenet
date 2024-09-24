@@ -1,0 +1,3 @@
+Cisco IOS Software, {{ version_string | ORIG | re(".+") }}
+{{host}}  uptime is {{ uptime | ORPHRASE}}
+Configuration register is {{ config_register }}

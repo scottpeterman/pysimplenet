@@ -1,0 +1,36 @@
+drivers:
+  linux_interfaces:
+    error_string: "error"
+    output_path: "./output/linux_interfaces_details.txt"
+    output_mode: "overwrite"
+    prompt_count: 4
+    actions:
+      # 1. Action to list all interfaces using the 'ip addr' command
+      - action: "send_command"
+        display_name: "List Interfaces"
+        command: "ip addr show"
+        expect: "#"
+        output_path: "./output/linux_interfaces.txt"
+        output_mode: "overwrite"
+        ttp_path: "./project/templates/linux_interface.ttp"
+        store_query:
+          query: "[]"
+          variable_name: "interfaces"
+
+      # 2. Loop action to get detailed information for each interface
+      - action: "send_command_loop"
+        display_name: "Loop Through Interfaces"
+        variable_name: "interfaces"
+        key_to_loop: "name"
+        command_template: "ethtool [{ name }]"  # Use ethtool for detailed information
+        expect: "#"
+        output_path: "./output/linux_interfaces_details.txt"
+        output_mode: "append"
+        parse_output: true
+        use_named_list:
+          list_name: "interface_details"
+          item_key: "speed"
+          ttp_path: "./project/templates/interface_ethtool.ttp"
+          store_query:
+            query: "[][]"
+            variable_name: "interface_speeds"

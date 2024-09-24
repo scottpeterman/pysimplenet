@@ -1,0 +1,10 @@
+<macro>
+def process_field(data):
+    # Remove any leading or trailing whitespace from the field
+    return data.strip()
+</macro>
+
+<group name="vpn_entries" output="list">
+VepID\s+Circuit-local\s+Circuit-Remote\s+Remote-Site\s+VpnType\s+Interface\s+SrcIP\s+DstIP\s+Status\s+Active
+{{ vepid | DIGIT | macro("process_field") }}  {{ ckt_local | ORPHRASE | macro("process_field") }}  {{ ckt_remote | ORPHRASE | macro("process_field") }}  {{ remote_site | ORPHRASE | macro("process_field") }}  {{ vpn_type | WORD }}  {{ port | RE("ppp\d+|\d+") }}  {{ src_ip | IP }}  {{ dest_ip | IP }}  {{ status | WORD }}  {{ active | WORD }}
+</group>

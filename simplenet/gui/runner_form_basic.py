@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import re
@@ -9,7 +10,7 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLineEdit, QTextEdit, QPushButton, QFileDialog, QCheckBox,
     QSpinBox, QDoubleSpinBox, QLabel, QProgressBar, QApplication,
-    QSplitter, QWidget, QScrollArea
+    QSplitter, QWidget, QScrollArea, QMessageBox
 )
 from PyQt6.QtCore import Qt, QProcess
 
@@ -147,6 +148,8 @@ class RunnerForm(QDialog):
             line_edit.setText(file_name)
 
     def run_and_save(self):
+        if not self.validate_paths():
+            return  # Stop if validation fails
         self.run_automation()
         self.save_form_data()
 
@@ -352,6 +355,27 @@ class RunnerForm(QDialog):
         except Exception as e:
             self.output_text.append(f"Error handling stdout: {str(e)}")
             traceback.print_exc()
+
+    def validate_paths(self):
+        """
+        Validates the file paths provided in the form.
+        Returns True if all paths are valid, False otherwise.
+        """
+        # List of (input field, description) for validation
+        paths_to_validate = [
+            (self.inventory_input.text(), "Inventory"),
+            (self.driver_input.text(), "Driver"),
+            (self.vars_input.text(), "Vars")  # Optionally skip if Vars is not required
+        ]
+
+        for path, description in paths_to_validate:
+            if path and not os.path.exists(path):
+                # Show an error message if the path does not exist
+                QMessageBox.critical(self, "Invalid Path", f"The {description} path '{path}' is invalid.")
+                self.output_text.append(f"Error: {description} path '{path}' does not exist.")
+                return False
+
+        return True
 
     def handle_stderr(self):
         try:

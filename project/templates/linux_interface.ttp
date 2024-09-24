@@ -1,0 +1,3 @@
+{{instance}}: {{name}}: {{ detail | ORPHRASE }}
+    altname {{ altname }}
+    inet {{ip}} brd {{brd}} scope {{ dontcare | ORPHRASE}}

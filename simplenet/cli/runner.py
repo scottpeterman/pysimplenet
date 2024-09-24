@@ -10,6 +10,11 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import Manager
 
 
+import sqlite3
+import os
+from ruamel.yaml import YAML
+
+
 def create_sqlite_db(yaml_file, db_file):
     """
     Create a SQLite database file from a YAML file.
@@ -21,76 +26,89 @@ def create_sqlite_db(yaml_file, db_file):
     Returns:
         sqlite3.Connection: SQLite connection object to the created database.
     """
-    # Remove the existing database file if it exists
-    if os.path.exists(db_file):
-        os.remove(db_file)
+    try:
+        # Remove the existing database file if it exists
+        if os.path.exists(db_file):
+            os.remove(db_file)
 
-    # Create a new SQLite database file
-    conn = sqlite3.connect(db_file)
-    c = conn.cursor()
+        # Create a new SQLite database file
+        print(f"Creating new SQLite DB at {db_file}")
+        conn = sqlite3.connect(db_file)
+        c = conn.cursor()
 
-    # Create tables based on the YAML structure
-    c.execute('''CREATE TABLE devices
-                 (id INTEGER PRIMARY KEY, hostname TEXT, mgmt_ip TEXT, model TEXT,
-                 serial_number TEXT, timestamp TEXT, platform_id INTEGER, role_id INTEGER,
-                 site_id INTEGER, vendor_id INTEGER)''')
-    c.execute('CREATE TABLE credentials (id INTEGER PRIMARY KEY, name TEXT, username TEXT, password TEXT)')
-    c.execute('CREATE TABLE platforms (id INTEGER PRIMARY KEY, name TEXT)')
-    c.execute('CREATE TABLE roles (id INTEGER PRIMARY KEY, name TEXT)')
-    c.execute('CREATE TABLE sites (id INTEGER PRIMARY KEY, name TEXT, location TEXT)')
-    c.execute('CREATE TABLE vendors (id INTEGER PRIMARY KEY, name TEXT)')
-    c.execute('CREATE TABLE device_credentials (device_id INTEGER, credential_id INTEGER)')
+        # Create tables based on the YAML structure
+        c.execute('''CREATE TABLE devices
+                     (id INTEGER PRIMARY KEY, hostname TEXT, mgmt_ip TEXT, model TEXT,
+                     serial_number TEXT, timestamp TEXT, platform_id INTEGER, role_id INTEGER,
+                     site_id INTEGER, vendor_id INTEGER)''')
+        c.execute('CREATE TABLE credentials (id INTEGER PRIMARY KEY, name TEXT, username TEXT, password TEXT)')
+        c.execute('CREATE TABLE platforms (id INTEGER PRIMARY KEY, name TEXT)')
+        c.execute('CREATE TABLE roles (id INTEGER PRIMARY KEY, name TEXT)')
+        c.execute('CREATE TABLE sites (id INTEGER PRIMARY KEY, name TEXT, location TEXT)')
+        c.execute('CREATE TABLE vendors (id INTEGER PRIMARY KEY, name TEXT)')
+        c.execute('CREATE TABLE device_credentials (device_id INTEGER, credential_id INTEGER)')
 
-    # Create a view that joins devices with related tables
-    c.execute('''
-    CREATE VIEW device_details AS
-    SELECT 
-        d.id, d.hostname, d.mgmt_ip, d.model, d.serial_number, d.timestamp,
-        p.name AS platform_name,
-        r.name AS role_name,
-        s.name AS site_name, s.location AS site_location,
-        v.name AS vendor_name
-    FROM devices d
-    LEFT JOIN platforms p ON d.platform_id = p.id
-    LEFT JOIN roles r ON d.role_id = r.id
-    LEFT JOIN sites s ON d.site_id = s.id
-    LEFT JOIN vendors v ON d.vendor_id = v.id
-    ''')
+        # Create a view that joins devices with related tables
+        c.execute('''
+        CREATE VIEW device_details AS
+        SELECT 
+            d.id, d.hostname, d.mgmt_ip, d.model, d.serial_number, d.timestamp,
+            p.name AS platform_name,
+            r.name AS role_name,
+            s.name AS site_name, s.location AS site_location,
+            v.name AS vendor_name
+        FROM devices d
+        LEFT JOIN platforms p ON d.platform_id = p.id
+        LEFT JOIN roles r ON d.role_id = r.id
+        LEFT JOIN sites s ON d.site_id = s.id
+        LEFT JOIN vendors v ON d.vendor_id = v.id
+        ''')
 
-    # Load YAML data using ruamel.yaml
-    yaml_loader = YAML()
-    yaml_loader.preserve_quotes = True  # Preserve quotes if necessary
+        # Load YAML data using ruamel.yaml
+        yaml_loader = YAML()
+        yaml_loader.preserve_quotes = True  # Preserve quotes if necessary
 
-    with open(yaml_file, 'r') as file:
-        data = yaml_loader.load(file)
+        with open(yaml_file, 'r') as file:
+            data = yaml_loader.load(file)
 
-    # Insert data into tables
-    for device in data.get('devices', []):
-        c.execute('''INSERT INTO devices VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                  (device['id'], device['hostname'], device['mgmt_ip'], device['model'],
-                   device['serial_number'], device['timestamp'], device['platform_id'],
-                   device['role_id'], device['site_id'], device['vendor_id']))
-        for cred_id in device.get('credential_ids', []):
-            c.execute('INSERT INTO device_credentials VALUES (?, ?)', (device['id'], cred_id))
+        # Insert data into tables
+        for device in data.get('devices', []):
+            c.execute('''INSERT INTO devices VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                      (device['id'], device['hostname'], device['mgmt_ip'], device['model'],
+                       device['serial_number'], device['timestamp'], device['platform_id'],
+                       device['role_id'], device['site_id'], device['vendor_id']))
+            for cred_id in device.get('credential_ids', []):
+                c.execute('INSERT INTO device_credentials VALUES (?, ?)', (device['id'], cred_id))
 
-    for cred in data.get('credentials', []):
-        c.execute('INSERT INTO credentials VALUES (?, ?, ?, ?)',
-                  (cred['id'], cred['name'], cred['username'], cred['password']))
+        for cred in data.get('credentials', []):
+            c.execute('INSERT INTO credentials VALUES (?, ?, ?, ?)',
+                      (cred['id'], cred['name'], cred['username'], cred['password']))
 
-    for platform in data.get('platforms', []):
-        c.execute('INSERT INTO platforms VALUES (?, ?)', (platform['id'], platform['name']))
+        for platform in data.get('platforms', []):
+            c.execute('INSERT INTO platforms VALUES (?, ?)', (platform['id'], platform['name']))
 
-    for role in data.get('roles', []):
-        c.execute('INSERT INTO roles VALUES (?, ?)', (role['id'], role['name']))
+        for role in data.get('roles', []):
+            c.execute('INSERT INTO roles VALUES (?, ?)', (role['id'], role['name']))
 
-    for site in data.get('sites', []):
-        c.execute('INSERT INTO sites VALUES (?, ?, ?)', (site['id'], site['name'], site['location']))
+        for site in data.get('sites', []):
+            c.execute('INSERT INTO sites VALUES (?, ?, ?)', (site['id'], site['name'], site['location']))
 
-    for vendor in data.get('vendors', []):
-        c.execute('INSERT INTO vendors VALUES (?, ?)', (vendor['id'], vendor['name']))
+        for vendor in data.get('vendors', []):
+            c.execute('INSERT INTO vendors VALUES (?, ?)', (vendor['id'], vendor['name']))
 
-    conn.commit()
-    return conn
+        conn.commit()
+        print("Database created and data inserted successfully.")
+        return conn
+
+    except sqlite3.Error as e:
+        print(f"SQLite error occurred: {e}")
+        return None
+
+    except Exception as e:
+        print(f"General error occurred: {e}")
+        return None
+
+
 
 
 def check_device_reachability(hostname):

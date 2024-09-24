@@ -1,0 +1,2 @@
+{{ interface }} is {{ phy_status | ORPHRASE }}, line protocol is {{ lp_state }}
+  MTU {{ mtu }} bytes, BW {{ bw | ORPHRASE }}, DLY {{ delay }} usec,

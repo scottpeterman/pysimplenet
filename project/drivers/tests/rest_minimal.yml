@@ -1,0 +1,14 @@
+drivers:
+  ion:
+    error_string: '400'
+    output_path: ''
+    output_mode: append
+    prompt_count:
+    actions:
+    - action: "rest_api"
+      display_name: "Get Post from JSONPlaceholder"
+      method: "GET"
+      url: "https://jsonplaceholder.typicode.com/posts/1"
+      headers:
+        Content-Type: "application/json"
+      expect: "200"

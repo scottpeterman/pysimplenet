@@ -7,18 +7,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 debug = False
 class DeviceSession:
     def __init__(self):
-        self.data = {}  # Store data associated with TTP paths and action indices
+        # Store data associated with TTP paths and action indices, and action_variables as part of data
+        self.data = {
+            'action_variables': {}  # Store action variables (results of store_query)
+        }
         self.audit_report = []
-        self.action_variables = {}  # Store action variables (results of store_query)
 
     def update(self, ttp_path, action_index, parsed_data):
         """
         Update the session with parsed data.
-
-        Args:
-            ttp_path (str): The path of the TTP template or identifier.
-            action_index (int): The index of the action being executed.
-            parsed_data (any): The parsed data to store.
         """
         if ttp_path not in self.data:
             self.data[ttp_path] = {}
@@ -26,57 +23,33 @@ class DeviceSession:
 
     def get_device_data(self):
         """
-        Get all data for the device session.
-
-        Returns:
-            dict: A dictionary representing the device data.
+        Get all data for the device session, including action_variables.
         """
-        return dict(self.data)
+        return self.data
 
     def add_audit_report(self, audit_result):
         """
         Add an audit report result to the session.
-
-        Args:
-            audit_result (any): The audit result to store.
         """
         self.audit_report.append(audit_result)
 
     def get_audit_report(self):
         """
         Retrieve all audit reports.
-
-        Returns:
-            list: A list of audit reports.
         """
         return list(self.audit_report)
 
     def set_variable(self, variable_name, value):
         """
-        Store a variable in the session data store.
-
-        Args:
-            variable_name (str): The name of the variable.
-            value: The value to store.
+        Store a variable in the action_variables data store.
         """
-        self.action_variables[variable_name] = value
-        if debug:
-            logging.debug(f"Set variable '{variable_name}' with value: {value} in device session.")
+        self.data['action_variables'][variable_name] = value
 
     def get_variable(self, variable_name):
         """
-        Retrieve a variable from the session data store.
-
-        Args:
-            variable_name (str): The name of the variable to retrieve.
-
-        Returns:
-            The value of the variable if found; otherwise, None.
+        Retrieve a variable from the action_variables store.
         """
-        var_fetch = self.action_variables.get(variable_name)
-
-        print(f"get_variable for [{variable_name}] returned {var_fetch}")
-        return var_fetch
+        return self.data['action_variables'].get(variable_name)
 
 
 class SessionBasedDataStore:

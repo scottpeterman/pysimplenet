@@ -1,3 +1,5 @@
+import logging
+logging.basicConfig(level=logging.CRITICAL)
 import json
 import traceback
 

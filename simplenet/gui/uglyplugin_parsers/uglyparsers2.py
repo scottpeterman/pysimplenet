@@ -3,7 +3,8 @@ from PyQt6.QtWidgets import QStyleFactory, QTextEdit
 from simplenet.gui.uglyplugin_parsers.parser_examples import p_examples
 from ttp import ttp
 from jinja2 import Template
-from ruamel.yaml import YAML as yaml
+# from ruamel.yaml import YAML as yaml
+import yaml
 import json
 import jmespath
 from simplenet.gui.uglyplugin_parsers.HighlighterTEWidget import SyntaxHighlighter
@@ -184,9 +185,9 @@ class UglyParsingWidget(QtWidgets.QWidget):
         self.highlighterComboBox = QtWidgets.QComboBox(self.verticalLayoutWidget)
         self.highlighterComboBox.setObjectName("highlighterComboBox")
         self.highlighterComboBox.addItem("No Highlighter")
-        self.highlighterComboBox.addItem("JSON Highlighter")
-        self.highlighterComboBox.addItem("Cisco Highlighter")
-        self.highlighterComboBox.addItem("Ansible Highlighter")
+        # self.highlighterComboBox.addItem("JSON Highlighter")
+        # self.highlighterComboBox.addItem("Cisco Highlighter")
+        # self.highlighterComboBox.addItem("Ansible Highlighter")
         self.highlighterComboBox.currentIndexChanged.connect(self.highlighterComboBoxChanged)
         self.highlighterComboBox.setVisible(False)
         self.verticalLayout_4.addWidget(self.highlighterComboBox)

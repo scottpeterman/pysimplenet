@@ -1,0 +1,30 @@
+drivers:
+  cisco_ios:
+    display_name: "cdp one command"
+    error_string: "Invalid input detected"
+    output_path: "./output/{{ hostname }}_version_check.txt"
+    output_mode: "append"
+    prompt_count: 4
+    actions:
+      - action: "send_command"
+# Error: Missing required field 'display_name' for action 'send_command' in driver 'cisco_ios'.
+        display_name: "send_command"
+        command: "term len 0"
+        expect: "#"
+      - action: "send_command"
+        display_name: "send_command"
+
+        command: "show cdp neighbors detail"
+        expect: "#"
+        output_path: "./output/{{ hostname }}_cdp_neighbors.txt"
+        output_mode: "overwrite"
+        ttp_path: "./project/templates/ios_show_cdp_neighbors.ttp"
+        store_query:
+          query: "[][]"
+          variable_name: "cdp_neighbors"
+      - action: "dump_datastore"
+        display_name: "dump data"
+
+        output_as: "both"
+        format: "json"
+        output_file_path: "./output-tests/cdp_one_command_datastore_output.json"

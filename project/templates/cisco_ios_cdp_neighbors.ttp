@@ -1,0 +1,6 @@
+<template name="cisco_ios_cdp_neighbors">
+Device ID: {{ neighbor_id }}
+  IP address: {{ ip_address }}
+  Platform: {{ platform }},  Capabilities: {{ capabilities }}
+Interface: {{ local_interface }},  Port ID (outgoing port): {{ remote_interface }}
+</template>

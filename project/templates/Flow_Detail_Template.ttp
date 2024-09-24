@@ -1,0 +1,1 @@
+  TRAFFIC: {{ var1 }}        PRIORITY: {{var2}}  DSCP: {{ dscp }}  STATE: {{state}}   IDLE: {{idle}}   IFACE: {{interface}}

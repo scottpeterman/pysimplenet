@@ -1,0 +1,12 @@
+drivers:
+  TestDriver:
+    error_string: "An error occurred"
+    output_path: "log/output.log"
+    output_mode: "append"
+    prompt_count: 1
+    actions:
+      - action: "python_script"
+        use_parent_path: true  # Use the same Python interpreter as the main app
+        path_to_script: "./project/scripts/show_path.py"
+        arguments_string: "--arg1 test_value --flag1"  # Pass arguments here
+        log_file: "log/show_path_execution.log"

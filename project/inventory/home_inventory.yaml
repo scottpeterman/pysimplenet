@@ -1,0 +1,142 @@
+credentials:
+- id: 1
+  name: default
+  username: cisco
+  password: cisco
+- id: 2
+  name: lnx
+  username: speterman
+  password: letme1n
+devices:
+- credential_ids:
+  - 1
+  hostname: usa1-rtr-1
+  id: 1
+  mgmt_ip: 172.16.101.100
+  model: Unknown Model
+  platform_id: 2
+  role_id: 3
+  serial_number: Unknown SN
+  site_id: 1
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa1-core-01
+  id: 2
+  mgmt_ip: 172.16.101.1
+  model: Unknown Model
+  platform_id: 2
+  role_id: 2
+  serial_number: Unknown SN
+  site_id: 1
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa1-core-02
+  id: 3
+  mgmt_ip: 172.16.101.2
+  model: Unknown Model
+  platform_id: 2
+  role_id: 2
+  serial_number: Unknown SN
+  site_id: 1
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa2-rtr-1
+  id: 4
+  mgmt_ip: 172.16.201.1
+  model: Unknown Model
+  platform_id: 2
+  role_id: 3
+  serial_number: Unknown SN
+  site_id: 2
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa1-access-02
+  id: 5
+  mgmt_ip: Unknown
+  model: Unknown Model
+  platform_id: 3
+  role_id: 1
+  serial_number: Unknown SN
+  site_id: 1
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa2-core-01
+  id: 6
+  mgmt_ip: 172.16.201.2
+  model: Unknown Model
+  platform_id: 2
+  role_id: 2
+  serial_number: Unknown SN
+  site_id: 2
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa2-core-02
+  id: 7
+  mgmt_ip: 172.16.201.1
+  model: Unknown Model
+  platform_id: 2
+  role_id: 2
+  serial_number: Unknown SN
+  site_id: 2
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 1
+  hostname: usa2-access-02
+  id: 8
+  mgmt_ip: 172.16.201.1
+  model: Unknown Model
+  platform_id: 2
+  role_id: 1
+  serial_number: Unknown SN
+  site_id: 2
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+- credential_ids:
+  - 2
+  hostname: linuxtest
+  id: 9
+  mgmt_ip: 10.0.0.108
+  model: Unknown Model
+  platform_id: 2
+  role_id: 1
+  serial_number: Unknown SN
+  site_id: 2
+  timestamp: '2023-08-24 10:00:00'
+  vendor_id: 1
+platforms:
+- id: 1
+  name: Unknown
+- id: 2
+  name: unknown
+- id: 3
+  name: Unknown Platform
+roles:
+- id: 1
+  name: access
+- id: 2
+  name: core
+- id: 3
+  name: rtr
+sites:
+- id: 1
+  location: Unknown Location
+  name: usa1
+- id: 2
+  location: Unknown Location
+  name: usa2
+vendors:
+- id: 1
+  name: Cisco

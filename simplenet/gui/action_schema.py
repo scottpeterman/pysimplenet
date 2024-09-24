@@ -84,6 +84,126 @@ schema = {
                 }
             ]
         },
+        "rest_api": {
+            "fields": [
+                {"name": "display_name", "type": "text", "label": "Display Name", "required": False},
+                {
+                    "name": "method",
+                    "type": "choice",
+                    "label": "HTTP Method",
+                    "choices": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                    "required": True
+                },
+                {"name": "url", "type": "text", "label": "URL", "required": True},
+                {
+                    "name": "headers",
+                    "type": "dictionary",
+                    "label": "Headers",
+                    "required": False,
+                    "keys": {"type": "text"},
+                    "values": {"type": "text"}
+                },
+                {
+                    "name": "body_type",
+                    "type": "choice",
+                    "label": "Body Type",
+                    "choices": ["json", "form", "raw"],
+                    "required": False,
+                    "default": "json",
+                    "description": "Choose the type of body data to send for methods like POST, PUT, or PATCH."
+                },
+                {
+                    "name": "body",
+                    "type": "dictionary",
+                    "label": "Request Body",
+                    "required": False,
+                    "keys": {"type": "text"},
+                    "values": {"type": "text"},
+                    "description": "The request body. Use key-value pairs for json/form types. For raw, use a text field."
+                },
+                {"name": "retries", "type": "number", "label": "Retries", "required": False, "default": "1"},
+                {"name": "expect", "type": "text", "label": "Expected Status Code", "required": False,
+                 "default": "200"},
+                {
+                    "name": "verify",
+                    "type": "checkbox",
+                    "label": "Verify SSL Certificates",
+                    "required": False,
+                    "default": True
+                },
+                {
+                    "name": "store_query",
+                    "type": "nested",
+                    "label": "Store Query",
+                    "required": False,
+                    "fields": [
+                        {"name": "query", "type": "text", "label": "JMESPath Query", "required": True},
+                        {"name": "variable_name", "type": "text", "label": "Variable Name", "required": True}
+                    ]
+                }
+            ]
+        },
+"rest_api_loop": {
+    "fields": [
+        {"name": "display_name", "type": "text", "label": "Display Name", "required": False},
+        {
+            "name": "method",
+            "type": "choice",
+            "label": "HTTP Method",
+            "choices": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+            "required": True
+        },
+        {"name": "url", "type": "text", "label": "URL Template", "required": True, "description": "Use placeholders like {{ key_to_loop }}"},
+        {
+            "name": "headers",
+            "type": "dictionary",
+            "label": "Headers",
+            "required": False,
+            "keys": {"type": "text"},
+            "values": {"type": "text"}
+        },
+        {
+            "name": "body_type",
+            "type": "choice",
+            "label": "Body Type",
+            "choices": ["json", "form", "raw"],
+            "required": False,
+            "default": "json",
+            "description": "Choose the type of body data to send."
+        },
+        {
+            "name": "body",
+            "type": "dictionary",
+            "label": "Request Body",
+            "required": False,
+            "keys": {"type": "text"},
+            "values": {"type": "text"}
+        },
+        {"name": "variable_name", "type": "text", "label": "Variable Name", "required": True, "description": "Name of the global variable to loop over."},
+        {"name": "key_to_loop", "type": "text", "label": "Key to Loop", "required": True, "description": "The key in each entry of the variable list to use."},
+        {"name": "retries", "type": "text", "label": "Retries", "required": False, "default": "1"},
+        {"name": "expect", "type": "text", "label": "Expected Status Code", "required": False, "default": "200"},
+        {
+            "name": "verify",
+            "type": "checkbox",
+            "label": "Verify SSL Certificates",
+            "required": False,
+            "default": True
+        },
+        {
+            "name": "store_query",
+            "type": "nested",
+            "label": "Store Query",
+            "required": False,
+            "fields": [
+                {"name": "query", "type": "text", "label": "JMESPath Query", "required": True},
+                {"name": "variable_name", "type": "text", "label": "Variable Name", "required": True}
+            ]
+        },
+        {"name": "output_path", "type": "text", "label": "Output File Path", "required": False},
+        {"name": "output_mode", "type": "choice", "label": "Output Mode", "choices": ["append", "overwrite"], "required": False, "default": "append"}
+    ]
+},
         "send_command": {
             "fields": [
                 {"name": "display_name", "type": "text", "label": "Display Name", "required": False},
