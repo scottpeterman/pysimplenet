@@ -32,9 +32,6 @@ PySimpleNet is a powerful and lightweight network automation toolkit that allows
 ![Linux Device Interface 1](https://raw.githubusercontent.com/scottpeterman/pysimplenet/refs/heads/main/screenshots/linux1.png)
 ![Linux Device Interface 2](https://raw.githubusercontent.com/scottpeterman/pysimplenet/refs/heads/main/screenshots/linux2.png)
 
-
-Apologies for the oversight. You're absolutely right—we should include the REST API support in the README.md. Below is the updated `README.md` with sections covering the `rest_api` and `rest_api_loop` actions, along with examples and explanations.
-
 ---
 
 # PySimpleNet
@@ -56,29 +53,6 @@ PySimpleNet is a powerful and lightweight network automation toolkit that allows
 - **Data Persistence**: Use SQLite databases for inventory and device data management.
 - **Visual YAML Editor**: Use the GUI editor to create and modify YAML configuration files easily.
 - **Debugger Tool**: Visually debug and step through automation workflows.
-
-## Screenshots
-
-### Full Interface
-
-![Full GUI](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/gui_full.png)
-
-### GUI Debug Mode
-
-![GUI Debug Mode](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/gui-debug.png)
-
-### TTP Parsing Example
-
-![TTP Parsing Example](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/gui_ttp.png)
-
-### Inventory Management
-
-![Inventory Management](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/inventory1.png)
-
-### Linux Device Interface
-
-![Linux Device Interface 1](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/linux1.png)
-![Linux Device Interface 2](https://raw.githubusercontent.com/scottpeterman/pysimplenet/main/screenshots/linux2.png)
 
 ## Prerequisites
 
@@ -111,10 +85,10 @@ pip install -r requirements.txt
 
 #### Running Automation Tasks
 
-Use the `simplenet` command to execute automation tasks defined in your YAML driver files.
-
+Use the `simplenet-runner` command to execute automation tasks defined in your YAML driver files.
+- Or runner.py if in development or running from source
 ```bash
-simplenet --inventory project/inventory/home_inventory.db --query "SELECT * FROM devices" --driver project/drivers/tests/cdp_interfaces_audit.yml
+simplenet-runner --inventory project/inventory/home_inventory.db --query "SELECT * FROM devices" --driver project/drivers/tests/cdp_interfaces_audit.yml
 ```
 
 ### Graphical User Interface (GUI)
@@ -324,7 +298,7 @@ Orchestrates the overall automation process.
   - `create_sqlite_db()`: Converts YAML inventory to SQLite database.
   - `check_device_reachability()`: Verifies if devices are reachable.
   - `run_for_device()`: Executes automation tasks for a single device.
-  - `query_yaml()`: Main Click command.
+  - `main()`: Main Click command.
 
 ### 2. Simplenet Module (`simplenet/cli/simplenet.py`)
 
@@ -334,7 +308,7 @@ Handles the execution of automation tasks for individual devices and APIs.
   - `run_automation_for_device()`: Runs automation tasks.
   - `main()`: Main Click command for single-device automation.
 
-### 3. Command Executor (`simplenet/cli/command_executor2.py`)
+### 3. Command Executor Library (`simplenet/cli/command_executor2.py`)
 
 Executes individual actions defined in the driver, including REST API actions.
 
@@ -466,16 +440,12 @@ Visually debug and step through automation workflows.
 3. **Execute the Runner Script**
 
    ```bash
-   simplenet --inventory project/inventory/home_inventory.db --query "SELECT * FROM devices" --driver project/drivers/tests/rest_api_example.yml
+   simplenet-runner --inventory project/inventory/home_inventory.db --query "SELECT * FROM devices" --driver project/drivers/tests/rest_api_example.yml
    ```
 
 4. **View Outputs**
 
    Check the `./output/` directory for command outputs, API responses, and audit results. Logs can be found in the `./` directory.
-
-## Contributing
-
-We welcome contributions! Please read [CONTRIBUTING.md](https://github.com/scottpeterman/pysimplenet/blob/main/CONTRIBUTING.md) for guidelines on how to get involved.
 
 ## License
 
@@ -503,13 +473,6 @@ The automation solution follows a modular approach, where each component plays a
 8. **Reporting**: Audit results and outputs are saved to files.
 9. **Debugging**: Use the Debugger GUI tool to step through workflows.
 
-#### File and Module Details
-
-- **`simplenet/cli/runner.py`**: Orchestrates the automation tasks.
-- **`simplenet/cli/simplenet.py`**: Executes automation tasks for individual devices and APIs.
-- **`simplenet/cli/command_executor2.py`**: Processes and executes each action, including REST API actions.
-- **`simplenet/gui/main_gui.py`**: Provides the GUI editor.
-- **`simplenet/gui/vsndebug.py`**: Allows users to debug workflows.
 
 ### Troubleshooting
 
@@ -517,30 +480,8 @@ The automation solution follows a modular approach, where each component plays a
 - **Connection Timeouts**: Verify network connectivity and device/API accessibility.
 - **Schema Validation Errors**: Make sure your YAML files conform to the defined schema.
 - **Authentication Failures**: Confirm that credentials and tokens are correctly associated.
-- **GUI Issues**: Ensure PyQt6 is properly installed.
-
-### Support
-
-For support or questions, please open an issue on the [GitHub repository](https://github.com/scottpeterman/pysimplenet/issues) or contact us at [scottpeterman@gmail.com](mailto:scottpeterman@gmail.com).
-
-### Frequently Asked Questions
-
-#### How do I add a new device or API endpoint to the inventory?
-
-Add the device details to your inventory YAML file under the `devices` section. For APIs, you can manage them directly in your driver files under `actions`.
-
-#### Can I use this tool with devices other than Cisco IOS or integrate with different APIs?
-
-Yes, you can extend the schema and driver definitions to support other device types and APIs. Define new drivers and actions as needed.
-
-#### How do I handle devices that use different SSH ports?
-
-You can modify the `mgmt_port` field in your inventory file for devices using non-standard SSH ports.
-
-#### Is there support for SNMP or other protocols?
 
 As of now, the tool primarily uses SSH for device communication and HTTP/S for API interactions. Support for other protocols can be added by extending the action handlers.
-
 
 ---
 

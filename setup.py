@@ -12,7 +12,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pysimplenet",  # Replace with your actual project name
-    version="0.1.3",  # Replace with your actual version
+    version="0.1.4",  # Replace with your actual version
     author="Scott Peterman",
     author_email="scottpeterman@gmail.com",
     description="Pysimplenet, automation tools for network engineers",
